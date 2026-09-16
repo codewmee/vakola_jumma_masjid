@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Something went wrong{% endblock %}
+{% block content %}
+<div class="min-h-screen flex items-center justify-center px-6 text-center bg-moss-100">
+  <div>
+    <p class="font-scheherazade text-5xl text-gold-600 mb-4">عفواً</p>
+    <h1 class="font-cinzel text-2xl text-moss-700 mb-2">Something went wrong</h1>
+    <p class="font-outfit text-sm text-moss-400 mb-8">{{ message or "Please try again in a moment." }}</p>
+    <a href="{{ url_for('main.index') }}" class="font-outfit text-xs uppercase tracking-widest px-8 py-3.5 rounded-full text-white inline-block"
+       style="background: linear-gradient(135deg, #475441, #6e8165);">Back to Home</a>
+  </div>
+</div>
+{% endblock %}

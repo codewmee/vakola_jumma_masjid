@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>{{ mosque_name|default('Masjid') }} · Admin Login</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Outfit:wght@400;500;600&family=Scheherazade+New:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --moss-500:#6e8165; --moss-600:#475441; --moss-700:#2e3429;
+    --gold-400:#d4b06a; --gold-500:#c9973a; --gold-600:#9a6e22;
+    --ink:#232922;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0; height:100%;}
+  body{
+    font-family:'Outfit',sans-serif; color:var(--ink);
+    min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;
+    background:
+      radial-gradient(circle at 15% 15%, rgba(212,176,106,0.18), transparent 45%),
+      radial-gradient(circle at 85% 85%, rgba(110,129,101,0.28), transparent 50%),
+      linear-gradient(160deg, var(--moss-700), #1d2318 70%);
+  }
+
+  .login-card{
+    width:100%; max-width:400px; border-radius:20px; padding:38px 34px 32px;
+    background:linear-gradient(155deg, rgba(255,255,255,0.14), rgba(255,255,255,0.05));
+    border:1px solid rgba(255,255,255,0.22);
+    backdrop-filter:blur(18px) saturate(140%);
+    -webkit-backdrop-filter:blur(18px) saturate(140%);
+    box-shadow:0 30px 70px rgba(0,0,0,0.35), 0 1px 0 rgba(255,255,255,0.25) inset;
+  }
+
+  .brand{text-align:center; margin-bottom:26px;}
+  .brand svg{margin-bottom:8px;}
+  .brand-arabic{font-family:'Scheherazade New',serif; color:var(--gold-400); font-size:1.3rem; margin:0 0 2px;}
+  .brand-name{font-family:'Cinzel',serif; color:#fff; font-size:1.15rem; font-weight:600; margin:0;}
+  .brand-sub{color:rgba(255,255,255,0.55); font-size:0.72rem; letter-spacing:0.04em; margin-top:2px;}
+
+  .flash-stack{margin-bottom:18px; display:flex; flex-direction:column; gap:8px;}
+  .flash{
+    font-size:0.82rem; padding:10px 14px; border-radius:10px;
+    border:1px solid rgba(255,255,255,0.2);
+  }
+  .flash-error{background:rgba(184,76,58,0.22); color:#ffd9d0;}
+  .flash-success{background:rgba(110,129,101,0.3); color:#e6efe2;}
+
+  .field-group{margin-bottom:16px;}
+  label{display:block; font-size:0.78rem; color:rgba(255,255,255,0.75); margin-bottom:6px;}
+  input[type="text"], input[type="password"]{
+    width:100%; padding:11px 13px; border-radius:11px; font-size:0.92rem;
+    background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.28); color:#fff;
+    font-family:'Outfit',sans-serif;
+  }
+  input::placeholder{color:rgba(255,255,255,0.4);}
+  input:focus{outline:2px solid var(--gold-400); outline-offset:1px; background:rgba(255,255,255,0.16);}
+
+  .btn-glass{
+    all:unset; box-sizing:border-box; cursor:pointer; width:100%; text-align:center;
+    margin-top:6px; padding:12px 18px; border-radius:12px;
+    font-family:'Outfit',sans-serif; font-weight:600; font-size:0.92rem; color:#2b2210;
+    background:linear-gradient(155deg, var(--gold-400), var(--gold-600));
+    border:1px solid rgba(255,255,255,0.4);
+    box-shadow:0 1px 0 rgba(255,255,255,0.5) inset, 0 8px 20px rgba(0,0,0,0.25);
+    transition:transform .12s ease, box-shadow .15s ease;
+  }
+  .btn-glass:hover{transform:translateY(-1px); box-shadow:0 1px 0 rgba(255,255,255,0.5) inset, 0 12px 26px rgba(0,0,0,0.3);}
+  .btn-glass:active{transform:translateY(0);}
+
+  .login-foot{margin-top:18px; text-align:center; font-size:0.72rem; color:rgba(255,255,255,0.4);}
+</style>
+</head>
+<body>
+
+  <div class="login-card">
+    <div class="brand">
+      <svg width="34" height="34" viewBox="0 0 32 32" fill="none">
+        <path d="M20 6a12 12 0 1 0 0 20A10 10 0 1 1 20 6z" fill="#d4b06a" opacity="0.9" />
+      </svg>
+      <p class="brand-arabic">لوحة الإدارة</p>
+      <p class="brand-name">{{ mosque_name|default('Masjid') }} Admin</p>
+      <p class="brand-sub">SIGN IN TO CONTINUE</p>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <div class="flash-stack">
+        {% for category, msg in messages %}
+        <div class="flash flash-{{ category }}">{{ msg }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('admin.login') }}" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="field-group">
+        <label for="username">Username</label>
+        <input id="username" name="username" type="text" autocomplete="username" required autofocus>
+      </div>
+      <div class="field-group">
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+      </div>
+
+      <button type="submit" class="btn-glass">Sign in</button>
+    </form>
+
+    <p class="login-foot">Access is limited to mosque administrators.</p>
+  </div>
+
+</body>
+</html>

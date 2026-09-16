@@ -1,0 +1,711 @@
+{#
+  ADMIN — REGISTRATIONS
+  ─────────────────────
+  Self-contained page (CSS + JS inline, no Tailwind). Drop straight into your
+  Flask templates/ folder and render with render_template('admin_registrations.html', ...).
+
+  Expected context from the view:
+    mosque_name      -> str
+    today            -> python datetime (for the header date)
+    registrations    -> list[dict], each shaped like:
+        {
+          "id":          "REG-0182",
+          "type":        "nikah" | "madrasa",
+          "status":      "pending" | "contacted" | "approved",
+          "submitted_at":"2026-09-14T10:32:00",   # ISO string, used for JS sort/filter/month
+          "display_date":"14 Sep 2026",            # pre-formatted for display
+          "display_time":"10:32 AM",
+          # nikah fields
+          "bride": "...", "groom": "...", "nikah_date": "...", "contact": "...",
+          # madrasa fields
+          "child_name": "...", "child_age": "...", "parent_name": "...", "madrasa_contact": "...",
+        }
+
+  If `registrations` isn't passed, the demo list below renders so you can see
+  the page working before wiring it to your Registration model.
+#}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>{{ mosque_name|default('Masjid') }} · Admin — Registrations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Outfit:wght@400;500;600;700&family=Scheherazade+New:wght@500;600&display=swap" rel="stylesheet">
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<style>
+  :root{
+    --moss-50:#eaede8;
+    --moss-100:#f5f7f4;
+    --moss-400:#8fa087;
+    --moss-500:#6e8165;
+    --moss-600:#475441;
+    --moss-700:#2e3429;
+    --gold-400:#d4b06a;
+    --gold-500:#c9973a;
+    --gold-600:#9a6e22;
+    --line:#d4dbd1;
+    --ink:#232922;
+    --paper:#f3f1e9;
+    --nikah:#9a6e22;
+    --nikah-bg:#f7ecd9;
+    --madrasa:#3f5c46;
+    --madrasa-bg:#e3ebe0;
+    --status-pending:#a3541f;
+    --status-pending-bg:#f6e4d3;
+    --status-contacted:#3d6a8f;
+    --status-contacted-bg:#dfeaf2;
+    --status-approved:#3f6b45;
+    --status-approved-bg:#e1ecdf;
+    --radius:14px;
+    --shadow-soft:0 8px 24px rgba(46,52,41,0.08);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Outfit',sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(circle at 12% 0%, rgba(201,151,58,0.10), transparent 45%),
+      radial-gradient(circle at 88% 100%, rgba(110,129,101,0.14), transparent 50%),
+      var(--paper);
+    min-height:100vh;
+  }
+  h1,h2,h3{font-family:'Cinzel',serif; letter-spacing:0.01em; margin:0;}
+  a{color:inherit;}
+
+  ::selection{background:var(--gold-400); color:#fff;}
+
+  /* ---------- layout shell ---------- */
+  .admin-shell{display:grid; grid-template-columns:236px 1fr; min-height:100vh;}
+  @media (max-width:900px){ .admin-shell{grid-template-columns:1fr;} }
+
+  .sidebar{
+    background:var(--moss-700);
+    color:var(--moss-50);
+    padding:28px 22px;
+    display:flex; flex-direction:column; gap:34px;
+  }
+  @media (max-width:900px){ .sidebar{padding:18px 20px; flex-direction:row; align-items:center; justify-content:space-between; gap:12px;} }
+
+  .brand{display:flex; align-items:center; gap:10px;}
+  .brand svg{flex-shrink:0;}
+  .brand-name{font-family:'Cinzel',serif; font-size:1.02rem; font-weight:600; color:#fff; line-height:1.15;}
+  .brand-sub{font-family:'Outfit',sans-serif; font-size:0.68rem; color:var(--moss-400); letter-spacing:0.06em;}
+
+  .side-nav{display:flex; flex-direction:column; gap:4px;}
+  @media (max-width:900px){ .side-nav{display:none;} }
+  .side-nav button{
+    all:unset; cursor:pointer;
+    font-family:'Outfit',sans-serif; font-size:0.88rem; color:var(--moss-100);
+    padding:10px 12px; border-radius:10px; display:flex; align-items:center; justify-content:space-between;
+    transition:background .15s ease;
+  }
+  .side-nav button:hover{background:rgba(255,255,255,0.06);}
+  .side-nav button.is-active{background:rgba(255,255,255,0.1); color:#fff;}
+  .side-nav button .count{
+    font-size:0.72rem; color:var(--gold-400); background:rgba(212,176,106,0.14);
+    padding:2px 8px; border-radius:20px;
+  }
+
+  .sidebar-foot{margin-top:auto; font-size:0.72rem; color:var(--moss-400); line-height:1.5;}
+  @media (max-width:900px){ .sidebar-foot{display:none;} }
+
+  .main{padding:30px 34px 60px; min-width:0;}
+  @media (max-width:640px){ .main{padding:20px 16px 40px;} }
+
+  .topbar{
+    display:flex; align-items:flex-end; justify-content:space-between; gap:20px;
+    margin-bottom:26px; flex-wrap:wrap;
+  }
+  .topbar h1{font-size:1.5rem; color:var(--moss-700);}
+  .topbar .eyebrow-ar{font-family:'Scheherazade New',serif; color:var(--gold-600); font-size:1.15rem; margin-bottom:2px;}
+  .topbar-date{font-size:0.85rem; color:var(--moss-500); margin-top:4px;}
+
+  /* ---------- stat cards ---------- */
+  .stats-row{display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:28px;}
+  @media (max-width:900px){ .stats-row{grid-template-columns:repeat(2,1fr);} }
+  @media (max-width:480px){ .stats-row{grid-template-columns:1fr;} }
+
+  .stat-card{
+    background:#fff; border:1px solid var(--line); border-radius:var(--radius);
+    padding:18px 20px; box-shadow:var(--shadow-soft);
+  }
+  .stat-card .stat-label{font-size:0.76rem; color:var(--moss-500); text-transform:none;}
+  .stat-card .stat-value{font-family:'Cinzel',serif; font-size:1.9rem; color:var(--moss-700); margin-top:4px;}
+  .stat-card.gold .stat-value{color:var(--gold-600);}
+  .stat-card .stat-sub{font-size:0.72rem; color:var(--moss-400); margin-top:2px;}
+
+  /* ---------- controls ---------- */
+  .controls{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    background:#fff; border:1px solid var(--line); border-radius:var(--radius);
+    padding:14px 16px; margin-bottom:20px; box-shadow:var(--shadow-soft);
+  }
+  .chip-group{display:flex; gap:6px; flex-wrap:wrap;}
+  .chip{
+    all:unset; cursor:pointer; font-size:0.8rem; padding:7px 14px; border-radius:999px;
+    border:1px solid var(--line); color:var(--moss-600); transition:all .15s ease;
+  }
+  .chip:hover{border-color:var(--moss-400);}
+  .chip.is-active{background:var(--moss-600); border-color:var(--moss-600); color:#fff;}
+
+  .control-divider{width:1px; align-self:stretch; background:var(--line); margin:0 2px;}
+  @media (max-width:760px){ .control-divider{display:none;} }
+
+  select.field, input.field{
+    font-family:'Outfit',sans-serif; font-size:0.82rem; color:var(--ink);
+    border:1px solid var(--line); border-radius:9px; padding:8px 10px; background:#fdfdfb;
+  }
+  select.field:focus, input.field:focus{outline:2px solid var(--gold-400); outline-offset:1px;}
+
+  .search-wrap{margin-left:auto; position:relative; min-width:220px; flex:1 1 220px;}
+  .search-wrap input{width:100%; padding:8px 12px 8px 32px;}
+  .search-wrap svg{position:absolute; left:9px; top:50%; transform:translateY(-50%); opacity:0.45;}
+
+  .date-range{display:flex; align-items:center; gap:6px; font-size:0.78rem; color:var(--moss-500);}
+
+  .results-line{font-size:0.78rem; color:var(--moss-500); margin:0 0 12px 2px;}
+  .results-line strong{color:var(--moss-700);}
+
+  .flash-stack{display:flex; flex-direction:column; gap:8px; margin-bottom:18px;}
+  .flash{font-size:0.82rem; padding:10px 14px; border-radius:10px; border:1px solid var(--line);}
+  .flash-error{background:#f7e3df; color:#8a3a24; border-color:#e8c3ba;}
+  .flash-success{background:var(--moss-50); color:var(--moss-700);}
+
+  .session-bar{display:flex; align-items:center; gap:10px; font-size:0.78rem; color:var(--moss-500);}
+  .session-bar a{color:var(--moss-600); text-decoration:underline;}
+
+  /* ---------- table ---------- */
+  .table-wrap{
+    background:#fff; border:1px solid var(--line); border-radius:var(--radius);
+    overflow:hidden; box-shadow:var(--shadow-soft);
+  }
+  table.reg-table{width:100%; border-collapse:collapse; font-size:0.86rem;}
+  .reg-table thead th{
+    text-align:left; font-weight:600; font-size:0.72rem; color:var(--moss-500);
+    padding:12px 16px; border-bottom:1px solid var(--line); background:var(--moss-50);
+    white-space:nowrap;
+  }
+  .reg-table tbody tr{border-bottom:1px solid var(--line); cursor:pointer; transition:background .12s ease;}
+  .reg-table tbody tr:last-child{border-bottom:none;}
+  .reg-table tbody tr:hover{background:var(--moss-50);}
+  .reg-table td{padding:13px 16px; vertical-align:middle;}
+  .reg-table td.name-cell{font-weight:500; color:var(--moss-700);}
+  .reg-table td .sub{display:block; font-size:0.74rem; color:var(--moss-500); font-weight:400; margin-top:1px;}
+
+  .badge{
+    display:inline-flex; align-items:center; gap:5px; font-size:0.72rem; font-weight:500;
+    padding:4px 10px; border-radius:999px; white-space:nowrap;
+  }
+  .badge-nikah{background:var(--nikah-bg); color:var(--nikah);}
+  .badge-madrasa{background:var(--madrasa-bg); color:var(--madrasa);}
+  .badge-pending{background:var(--status-pending-bg); color:var(--status-pending);}
+  .badge-contacted{background:var(--status-contacted-bg); color:var(--status-contacted);}
+  .badge-approved{background:var(--status-approved-bg); color:var(--status-approved);}
+
+  .timestamp-cell{color:var(--moss-600); white-space:nowrap;}
+  .view-cell{text-align:right; color:var(--moss-400);}
+
+  .empty-state{padding:56px 20px; text-align:center; display:none;}
+  .empty-state.is-visible{display:block;}
+  .empty-state p{font-size:0.9rem; color:var(--moss-500); margin-top:6px;}
+  .empty-state .empty-arabic{font-family:'Scheherazade New',serif; color:var(--gold-500); font-size:1.3rem;}
+
+  /* ---------- glass buttons (used in table actions + modal) ---------- */
+  .btn-glass{
+    all:unset; cursor:pointer; box-sizing:border-box;
+    display:inline-flex; align-items:center; justify-content:center; gap:7px;
+    font-family:'Outfit',sans-serif; font-size:0.82rem; font-weight:500;
+    padding:10px 18px; border-radius:12px;
+    color:#fff;
+    background:rgba(255,255,255,0.14);
+    border:1px solid rgba(255,255,255,0.35);
+    backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+    box-shadow:0 1px 0 rgba(255,255,255,0.4) inset, 0 6px 18px rgba(46,52,41,0.18);
+    transition:transform .12s ease, background .15s ease, box-shadow .15s ease;
+  }
+  .btn-glass:hover{background:rgba(255,255,255,0.24); transform:translateY(-1px);}
+  .btn-glass:active{transform:translateY(0);}
+  .btn-glass:disabled{opacity:0.45; cursor:not-allowed; transform:none;}
+
+  .btn-glass--gold{background:rgba(201,151,58,0.28); border-color:rgba(212,176,106,0.55);}
+  .btn-glass--gold:hover{background:rgba(201,151,58,0.42);}
+  .btn-glass--moss{background:rgba(71,84,65,0.35); border-color:rgba(143,160,135,0.5);}
+  .btn-glass--moss:hover{background:rgba(71,84,65,0.5);}
+  .btn-glass--ghost{background:rgba(255,255,255,0.08); color:var(--moss-700); border-color:rgba(46,52,41,0.14); box-shadow:none;}
+  .btn-glass--ghost:hover{background:rgba(255,255,255,0.35);}
+
+  /* ---------- modal (redesigned: bigger, glassmorphic) ---------- */
+  .modal-overlay{
+    position:fixed; inset:0; z-index:80; display:none;
+    align-items:center; justify-content:center; padding:24px;
+    background:rgba(35,41,34,0.55);
+    backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px);
+  }
+  .modal-overlay.is-open{display:flex;}
+
+  .modal-glass{
+    width:100%; max-width:760px; max-height:88vh; overflow-y:auto;
+    border-radius:22px;
+    background:linear-gradient(155deg, rgba(255,255,255,0.62), rgba(255,255,255,0.34));
+    border:1px solid rgba(255,255,255,0.55);
+    backdrop-filter:blur(22px) saturate(140%);
+    -webkit-backdrop-filter:blur(22px) saturate(140%);
+    box-shadow:0 30px 70px rgba(30,36,26,0.35), 0 1px 0 rgba(255,255,255,0.6) inset;
+    padding:34px 38px 30px;
+    position:relative;
+    animation:modal-in .2s ease;
+  }
+  @keyframes modal-in{ from{opacity:0; transform:translateY(10px) scale(.98);} to{opacity:1; transform:none;} }
+  @media (max-width:640px){ .modal-glass{padding:26px 20px 22px; border-radius:18px;} }
+
+  .modal-close{
+    all:unset; cursor:pointer; position:absolute; top:18px; right:18px;
+    width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    background:rgba(255,255,255,0.5); border:1px solid rgba(46,52,41,0.12); color:var(--moss-600);
+    font-size:1rem; backdrop-filter:blur(6px);
+  }
+  .modal-close:hover{background:rgba(255,255,255,0.85);}
+
+  .modal-head{display:flex; align-items:flex-start; gap:14px; margin-bottom:22px; padding-right:34px;}
+  .modal-head .type-icon{
+    width:46px; height:46px; border-radius:13px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:1.3rem;
+  }
+  .modal-head .type-icon.nikah{background:var(--nikah-bg); color:var(--nikah);}
+  .modal-head .type-icon.madrasa{background:var(--madrasa-bg); color:var(--madrasa);}
+  .modal-arabic{font-family:'Scheherazade New',serif; color:var(--gold-600); font-size:1.15rem; margin-bottom:1px;}
+  .modal-title{font-size:1.35rem; color:var(--moss-700);}
+  .modal-meta{font-size:0.78rem; color:var(--moss-500); margin-top:3px;}
+
+  .modal-divider{height:1px; background:rgba(46,52,41,0.12); margin:0 0 22px;}
+
+  .detail-grid{
+    display:grid; grid-template-columns:1fr 1fr; gap:18px 24px; margin-bottom:26px;
+  }
+  @media (max-width:520px){ .detail-grid{grid-template-columns:1fr;} }
+  .detail-item .detail-label{font-size:0.7rem; color:var(--moss-500); margin-bottom:3px;}
+  .detail-item .detail-value{font-size:0.98rem; color:var(--ink); font-weight:500;}
+
+  .modal-foot{
+    display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+    padding-top:18px; border-top:1px solid rgba(46,52,41,0.12);
+  }
+  .status-select-wrap{display:flex; align-items:center; gap:8px;}
+  .status-select-wrap label{font-size:0.78rem; color:var(--moss-500);}
+  .modal-actions{display:flex; gap:10px; flex-wrap:wrap;}
+
+  /* ---------- misc ---------- */
+  .visually-hidden{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0);}
+</style>
+</head>
+<body>
+
+<div class="admin-shell">
+
+  {# ─── SIDEBAR ─────────────────────────────────────────── #}
+  <aside class="sidebar">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 32 32" fill="none">
+        <path d="M20 6a12 12 0 1 0 0 20A10 10 0 1 1 20 6z" fill="#d4b06a" opacity="0.9" />
+      </svg>
+      <div>
+        <p class="brand-name">{{ mosque_name|default('Masjid Admin') }}</p>
+        <p class="brand-sub">ADMIN PANEL</p>
+      </div>
+    </div>
+    <nav class="side-nav">
+      <button type="button" data-nav-filter="all" class="is-active">Overview <span class="count" id="nav-count-all">0</span></button>
+      <button type="button" data-nav-filter="nikah">Nikah Applications <span class="count" id="nav-count-nikah">0</span></button>
+      <button type="button" data-nav-filter="madrasa">Madrasa Admissions <span class="count" id="nav-count-madrasa">0</span></button>
+    </nav>
+    <p class="sidebar-foot">Registrations submitted from the mosque's Nikah Nama and Madrasa Admissions forms are collected here automatically.</p>
+  </aside>
+
+  {# ─── MAIN ────────────────────────────────────────────── #}
+  <main class="main">
+
+    <div class="topbar">
+      <div>
+        <p class="eyebrow-ar">التسجيلات</p>
+        <h1>Registrations</h1>
+        <p class="topbar-date">{{ today.strftime('%A, %-d %B %Y') if today is defined else '' }}</p>
+      </div>
+      {% if admin_username is defined and admin_username %}
+      <div class="session-bar">
+        <span>Signed in as <strong>{{ admin_username }}</strong></span>
+        <a href="{{ url_for('admin.logout') }}">Log out</a>
+      </div>
+      {% endif %}
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <div class="flash-stack">
+        {% for category, msg in messages %}
+        <div class="flash flash-{{ category }}">{{ msg }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    {% endwith %}
+
+    {# ── demo data — only used if `registrations` isn't passed by admin.py's dashboard route ── #}
+    {% set demo_registrations = [
+      {"id":"REG-0231","type":"madrasa","status":"pending","submitted_at":"2026-09-16T09:12:00","display_date":"16 Sep 2026","display_time":"9:12 AM","child_name":"Yusuf Ansari","child_age":"7","parent_name":"Imran Ansari","madrasa_contact":"+91 98200 11223"},
+      {"id":"REG-0230","type":"nikah","status":"contacted","submitted_at":"2026-09-15T17:40:00","display_date":"15 Sep 2026","display_time":"5:40 PM","bride":"Ayesha Sheikh","groom":"Zaid Qureshi","nikah_date":"2026-10-12","contact":"+91 98671 44902"},
+      {"id":"REG-0229","type":"madrasa","status":"approved","submitted_at":"2026-09-14T11:05:00","display_date":"14 Sep 2026","display_time":"11:05 AM","child_name":"Aaliyah Khan","child_age":"9","parent_name":"Salma Khan","madrasa_contact":"+91 90040 55810"},
+      {"id":"REG-0228","type":"madrasa","status":"pending","submitted_at":"2026-09-12T08:30:00","display_date":"12 Sep 2026","display_time":"8:30 AM","child_name":"Ibrahim Sayed","child_age":"6","parent_name":"Nasreen Sayed","madrasa_contact":"+91 99870 21044"},
+      {"id":"REG-0227","type":"nikah","status":"pending","submitted_at":"2026-09-09T14:22:00","display_date":"9 Sep 2026","display_time":"2:22 PM","bride":"Farah Merchant","groom":"Danish Pathan","nikah_date":"2026-11-01","contact":"+91 97690 33218"},
+      {"id":"REG-0226","type":"madrasa","status":"approved","submitted_at":"2026-08-29T10:00:00","display_date":"29 Aug 2026","display_time":"10:00 AM","child_name":"Zainab Mulla","child_age":"11","parent_name":"Rukhsar Mulla","madrasa_contact":"+91 98192 87701"},
+      {"id":"REG-0225","type":"nikah","status":"approved","submitted_at":"2026-08-21T12:15:00","display_date":"21 Aug 2026","display_time":"12:15 PM","bride":"Sana Qazi","groom":"Adil Shaikh","nikah_date":"2026-09-28","contact":"+91 98330 76542"}
+    ] %}
+    {% set regs = registrations|default(demo_registrations) %}
+
+    {# ── stat cards (values filled by JS from the rows below, so they always match what's rendered) ── #}
+    <section class="stats-row">
+      <div class="stat-card">
+        <p class="stat-label">Total registrations</p>
+        <p class="stat-value" id="stat-total">0</p>
+        <p class="stat-sub">Across both forms</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-label">Madrasa admissions</p>
+        <p class="stat-value" id="stat-madrasa">0</p>
+        <p class="stat-sub">Children enrolled or pending</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-label">Nikah applications</p>
+        <p class="stat-value" id="stat-nikah">0</p>
+        <p class="stat-sub">Marriages registered or pending</p>
+      </div>
+      <div class="stat-card gold">
+        <p class="stat-label">This month</p>
+        <p class="stat-value" id="stat-month">0</p>
+        <p class="stat-sub" id="stat-month-label">New submissions</p>
+      </div>
+    </section>
+
+    {# ── filters + search ── #}
+    <div class="controls">
+      <div class="chip-group" id="type-chips">
+        <button type="button" class="chip is-active" data-type="all">All</button>
+        <button type="button" class="chip" data-type="madrasa">Madrasa</button>
+        <button type="button" class="chip" data-type="nikah">Nikah</button>
+      </div>
+
+      <div class="control-divider"></div>
+
+      <select class="field" id="status-filter">
+        <option value="all">All statuses</option>
+        <option value="pending">Pending</option>
+        <option value="contacted">Contacted</option>
+        <option value="approved">Approved</option>
+      </select>
+
+      <div class="date-range">
+        <input class="field" type="date" id="date-from" aria-label="From date">
+        <span>to</span>
+        <input class="field" type="date" id="date-to" aria-label="To date">
+      </div>
+
+      <div class="search-wrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input class="field" type="text" id="search-input" placeholder="Search by name or contact number">
+      </div>
+    </div>
+
+    <p class="results-line">Showing <strong id="results-count">0</strong> of <strong id="results-total">0</strong> registrations</p>
+
+    {# ── table ── #}
+    <div class="table-wrap">
+      <table class="reg-table">
+        <thead>
+          <tr>
+            <th>Applicant</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Submitted</th>
+            <th>Contact</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="reg-table-body">
+          {% for r in regs %}
+          <tr class="reg-row"
+              data-id="{{ r.id }}"
+              data-dbid="{{ r.db_id|default(loop.index) }}"
+              data-type="{{ r.type }}"
+              data-status="{{ r.status }}"
+              data-submitted="{{ r.submitted_at }}"
+              data-search="{{ (r.bride ~ ' ' ~ r.groom ~ ' ' ~ r.contact if r.type == 'nikah' else r.child_name ~ ' ' ~ r.parent_name ~ ' ' ~ r.madrasa_contact)|lower }}"
+              {% if r.type == 'nikah' %}
+              data-primary="{{ r.bride }} &amp; {{ r.groom }}"
+              data-secondary="Nikah date: {{ r.nikah_date }}"
+              data-contact="{{ r.contact }}"
+              data-field-bride="{{ r.bride }}"
+              data-field-groom="{{ r.groom }}"
+              data-field-nikahdate="{{ r.nikah_date }}"
+              {% else %}
+              data-primary="{{ r.child_name }}"
+              data-secondary="Age {{ r.child_age }} · Guardian: {{ r.parent_name }}"
+              data-contact="{{ r.madrasa_contact }}"
+              data-field-child="{{ r.child_name }}"
+              data-field-age="{{ r.child_age }}"
+              data-field-parent="{{ r.parent_name }}"
+              {% endif %}
+          >
+            <td class="name-cell">
+              {{ r.bride ~ ' & ' ~ r.groom if r.type == 'nikah' else r.child_name }}
+              <span class="sub">{{ 'Nikah date: ' ~ r.nikah_date if r.type == 'nikah' else 'Age ' ~ r.child_age ~ ' · Guardian: ' ~ r.parent_name }}</span>
+            </td>
+            <td><span class="badge {{ 'badge-nikah' if r.type == 'nikah' else 'badge-madrasa' }}">{{ 'Nikah' if r.type == 'nikah' else 'Madrasa' }}</span></td>
+            <td><span class="badge badge-{{ r.status }} status-badge">{{ r.status|capitalize }}</span></td>
+            <td class="timestamp-cell">{{ r.display_date }}<span class="sub">{{ r.display_time }}</span></td>
+            <td>{{ r.contact if r.type == 'nikah' else r.madrasa_contact }}</td>
+            <td class="view-cell">View →</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <div class="empty-state" id="empty-state">
+        <p class="empty-arabic">لا توجد نتائج</p>
+        <p>No registrations match these filters. Try clearing the search or date range.</p>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+{# ─── DETAIL MODAL (redesigned: larger, glassmorphic) ─────── #}
+<div class="modal-overlay" id="detail-modal">
+  <div class="modal-glass" role="dialog" aria-modal="true" aria-labelledby="modal-title-text">
+    <button type="button" class="modal-close" id="modal-close-btn" aria-label="Close">✕</button>
+
+    <div class="modal-head">
+      <div class="type-icon" id="modal-type-icon">🕌</div>
+      <div>
+        <p class="modal-arabic" id="modal-arabic-label"></p>
+        <h3 class="modal-title" id="modal-title-text"></h3>
+        <p class="modal-meta" id="modal-meta-text"></p>
+      </div>
+    </div>
+    <div class="modal-divider"></div>
+
+    <div class="detail-grid" id="modal-detail-grid">
+      {# populated by JS #}
+    </div>
+
+    <div class="modal-foot">
+      <div class="status-select-wrap">
+        <label for="modal-status-select">Status</label>
+        <select class="field" id="modal-status-select">
+          <option value="pending">Pending</option>
+          <option value="contacted">Contacted</option>
+          <option value="approved">Approved</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-glass btn-glass--ghost" id="modal-print-btn">Print</button>
+        <button type="button" class="btn-glass btn-glass--moss" id="modal-call-btn">Call applicant</button>
+        <button type="button" class="btn-glass btn-glass--gold" id="modal-save-btn">Save status</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var rows = Array.prototype.slice.call(document.querySelectorAll('.reg-row'));
+  var state = { type: 'all', status: 'all', search: '', from: '', to: '' };
+
+  // ---------- stats (computed once from the rendered rows) ----------
+  function refreshStats() {
+    var total = rows.length, madrasa = 0, nikah = 0, thisMonth = 0;
+    var now = new Date();
+    rows.forEach(function (row) {
+      if (row.dataset.type === 'madrasa') madrasa++;
+      if (row.dataset.type === 'nikah') nikah++;
+      var d = new Date(row.dataset.submitted);
+      if (!isNaN(d) && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) thisMonth++;
+    });
+    document.getElementById('stat-total').textContent = total;
+    document.getElementById('stat-madrasa').textContent = madrasa;
+    document.getElementById('stat-nikah').textContent = nikah;
+    document.getElementById('stat-month').textContent = thisMonth;
+    document.getElementById('nav-count-all').textContent = total;
+    document.getElementById('nav-count-madrasa').textContent = madrasa;
+    document.getElementById('nav-count-nikah').textContent = nikah;
+    document.getElementById('results-total').textContent = total;
+    document.getElementById('stat-month-label').textContent = now.toLocaleString('en-US', { month: 'long' }) + ' submissions';
+  }
+
+  // ---------- filtering ----------
+  function applyFilters() {
+    var visible = 0;
+    rows.forEach(function (row) {
+      var matchesType = state.type === 'all' || row.dataset.type === state.type;
+      var matchesStatus = state.status === 'all' || row.dataset.status === state.status;
+      var matchesSearch = !state.search || row.dataset.search.indexOf(state.search) !== -1;
+
+      var submitted = new Date(row.dataset.submitted);
+      var matchesFrom = !state.from || submitted >= new Date(state.from + 'T00:00:00');
+      var matchesTo = !state.to || submitted <= new Date(state.to + 'T23:59:59');
+
+      var show = matchesType && matchesStatus && matchesSearch && matchesFrom && matchesTo;
+      row.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+    document.getElementById('results-count').textContent = visible;
+    document.getElementById('empty-state').classList.toggle('is-visible', visible === 0);
+  }
+
+  document.getElementById('type-chips').addEventListener('click', function (e) {
+    var btn = e.target.closest('.chip');
+    if (!btn) return;
+    document.querySelectorAll('#type-chips .chip').forEach(function (c) { c.classList.remove('is-active'); });
+    btn.classList.add('is-active');
+    state.type = btn.dataset.type;
+    document.querySelectorAll('.side-nav button').forEach(function (b) {
+      b.classList.toggle('is-active', b.dataset.navFilter === state.type);
+    });
+    applyFilters();
+  });
+
+  document.querySelectorAll('.side-nav button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var val = btn.dataset.navFilter;
+      state.type = val;
+      document.querySelectorAll('.side-nav button').forEach(function (b) { b.classList.remove('is-active'); });
+      btn.classList.add('is-active');
+      document.querySelectorAll('#type-chips .chip').forEach(function (c) {
+        c.classList.toggle('is-active', c.dataset.type === val);
+      });
+      applyFilters();
+    });
+  });
+
+  document.getElementById('status-filter').addEventListener('change', function (e) {
+    state.status = e.target.value;
+    applyFilters();
+  });
+  document.getElementById('date-from').addEventListener('change', function (e) {
+    state.from = e.target.value;
+    applyFilters();
+  });
+  document.getElementById('date-to').addEventListener('change', function (e) {
+    state.to = e.target.value;
+    applyFilters();
+  });
+  document.getElementById('search-input').addEventListener('input', function (e) {
+    state.search = e.target.value.trim().toLowerCase();
+    applyFilters();
+  });
+
+  // ---------- modal ----------
+  var modal = document.getElementById('detail-modal');
+  var activeRow = null;
+
+  var FIELD_LABELS = {
+    bride: "Bride's name", groom: "Groom's name", nikahdate: "Preferred nikah date",
+    child: "Child's name", age: "Child's age", parent: "Parent / guardian"
+  };
+
+  function openModal(row) {
+    activeRow = row;
+    var isNikah = row.dataset.type === 'nikah';
+
+    document.getElementById('modal-type-icon').textContent = isNikah ? '💍' : '📖';
+    document.getElementById('modal-type-icon').className = 'type-icon ' + row.dataset.type;
+    document.getElementById('modal-arabic-label').textContent = isNikah ? 'نكاح نامہ' : 'مدرسہ داخلہ';
+    document.getElementById('modal-title-text').textContent = row.dataset.primary.replace('&amp;', '&');
+    document.getElementById('modal-meta-text').textContent =
+      row.dataset.id + ' · Submitted ' + row.querySelector('.timestamp-cell').textContent.replace(/\s+/g, ' ').trim();
+
+    var grid = document.getElementById('modal-detail-grid');
+    grid.innerHTML = '';
+    Object.keys(row.dataset).forEach(function (key) {
+      if (key.indexOf('field') !== 0) return;
+      var fieldKey = key.replace('field', '').toLowerCase();
+      var label = FIELD_LABELS[fieldKey] || fieldKey;
+      var item = document.createElement('div');
+      item.className = 'detail-item';
+      item.innerHTML = '<p class="detail-label">' + label + '</p><p class="detail-value"></p>';
+      item.querySelector('.detail-value').textContent = row.dataset[key];
+      grid.appendChild(item);
+    });
+    var contactItem = document.createElement('div');
+    contactItem.className = 'detail-item';
+    contactItem.innerHTML = '<p class="detail-label">Contact number</p><p class="detail-value"></p>';
+    contactItem.querySelector('.detail-value').textContent = row.dataset.contact;
+    grid.appendChild(contactItem);
+
+    document.getElementById('modal-status-select').value = row.dataset.status;
+    document.getElementById('modal-call-btn').onclick = function () {
+      window.location.href = 'tel:' + row.dataset.contact.replace(/\s+/g, '');
+    };
+
+    modal.classList.add('is-open');
+  }
+
+  function closeModal() {
+    modal.classList.remove('is-open');
+    activeRow = null;
+  }
+
+  rows.forEach(function (row) {
+    row.addEventListener('click', function () { openModal(row); });
+  });
+  document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+  modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && modal.classList.contains('is-open')) closeModal(); });
+
+  document.getElementById('modal-save-btn').addEventListener('click', function () {
+    if (!activeRow) return;
+    var newStatus = document.getElementById('modal-status-select').value;
+    var dbId = activeRow.dataset.dbid;
+    var csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+    var saveBtn = document.getElementById('modal-save-btn');
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
+
+    fetch('/admin/registrations/' + dbId + '/status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+      body: JSON.stringify({ status: newStatus })
+    })
+      .then(function (res) {
+        if (!res.ok) throw new Error('Request failed with ' + res.status);
+        return res.json();
+      })
+      .then(function () {
+        activeRow.dataset.status = newStatus;
+        var badge = activeRow.querySelector('.status-badge');
+        badge.className = 'badge badge-' + newStatus + ' status-badge';
+        badge.textContent = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
+        closeModal();
+        applyFilters();
+        refreshStats();
+      })
+      .catch(function (err) {
+        alert('Could not save the status change — please try again.');
+        console.error(err);
+      })
+      .finally(function () {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save status';
+      });
+  });
+
+  document.getElementById('modal-print-btn').addEventListener('click', function () { window.print(); });
+
+  refreshStats();
+  applyFilters();
+})();
+</script>
+</body>
+</html>

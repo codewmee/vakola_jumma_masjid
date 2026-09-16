@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+.env
+instance/
+*.db
+node_modules/
+app/static/css/tailwind.css
+.DS_Store
+*.log

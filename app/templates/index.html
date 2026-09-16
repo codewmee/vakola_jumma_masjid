@@ -1,0 +1,402 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page">
+
+  {# ─── HERO ────────────────────────────────────────────── #}
+  <section class="hero">
+    <img  src="https://images.unsplash.com/photo-1781968727494-c74dd96169f6?w=1600&h=2200&fit=crop&auto=format"
+      alt="Minaret rising through misty dawn" class="hero-bg" />
+    <div class="hero-scrim"></div>
+    <div class="hero-noise"></div>
+
+    <nav class="site-nav">
+      <div class="brand">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <path d="M20 6a12 12 0 1 0 0 20A10 10 0 1 1 20 6z" fill="#9a6e22" opacity="0.85" />
+        </svg>
+        <a href="/"><span class="brand-name">{{ mosque_name }}</span></a>
+      </div>
+      <div class="nav-links">
+        <a href="#prayer-times">Prayer Times</a>
+        <a href="#services">Services</a>
+        <a href="#contact">Contact</a>
+      </div>
+      <button data-open-modal="donation" class="btn btn--gold nav-donate">Donate</button>
+    </nav>
+
+    <div class="hero-content">
+      <p class="bismillah">بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ</p>
+      <p class="bismillah-translation">In the name of Allah, the Most Gracious, the Most Merciful</p>
+
+      <div class="hero-divider"></div>
+
+      <h1 class="hero-title">
+        {{ mosque_name.split(' ')[:-1]|join(' ') if mosque_name.split(' ')|length > 1 else mosque_name }}<br />
+        {{ mosque_name.split(' ')[-1] }}
+      </h1>
+      <p class="hero-title-arabic">مسجد وکولا جمعہ</p>
+
+     <p class="hero-date">{{ today.strftime('%A, ') }}{{ today.day }}{{ today.strftime(' %B %Y') }}</p>
+      <span id="live-clock" class="hero-clock">--:--:--</span>
+
+      <div class="hero-actions">
+        <a href="#prayer-times" class="btn btn--moss">Prayer Times</a>
+        <button data-open-modal="nikah" class="btn btn--outline-gold">Nikah &amp; Services</button>
+      </div>
+    </div>
+
+    {% set next_prayer = prayers|selectattr('active')|first|default(prayers|first) %}
+    {% if next_prayer %}
+    <div class="next-prayer-card">
+      <div class="next-prayer-inner">
+        <div class="pulse-dot"></div>
+        <div>
+          <p class="eyebrow">Next Prayer</p>
+          <p class="text-cinzel" style="font-size:1.1rem;color:var(--moss-700);margin:0;">{{ next_prayer.name }} · {{ next_prayer.time }}</p>
+        </div>
+        <div class="next-prayer-divider"></div>
+        <div>
+          <p class="eyebrow">Iqama</p>
+          <p class="text-cinzel" style="font-size:1.1rem;color:var(--gold-600);margin:0;">{{ next_prayer.iqama }}</p>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="ticker">
+      <div class="ticker-track">
+        {% set ayahs = [
+        {"arabic": "وَأَقِيمُوا الصَّلَاةَ وَآتُوا الزَّكَاةَ", "trans": "Establish prayer and give zakah — Al-Baqarah
+        2:43"},
+        {"arabic": "إِنَّ الصَّلَاةَ كَانَتْ عَلَى الْمُؤْمِنِينَ كِتَابًا مَّوْقُوتًا", "trans": "Indeed, prayer has
+        been decreed upon the believers at specified times — An-Nisa 4:103"},
+        {"arabic": "وَاسْتَعِينُوا بِالصَّبْرِ وَالصَّلَاةِ", "trans": "Seek help through patience and prayer —
+        Al-Baqarah 2:45"},
+        {"arabic": "فَإِنَّ مَعَ الْعُسْرِ يُسْرًا", "trans": "Indeed, with hardship comes ease — Ash-Sharh 94:5"}
+        ] %}
+        {% for _ in range(2) %}
+        <span class="ticker-group">
+          {% for ayah in ayahs %}
+          <span class="ticker-item">
+            <span class="ticker-text">
+              <span class="ticker-arabic">{{ ayah.arabic }}</span>
+              <span class="ticker-trans">{{ ayah.trans }}</span>
+            </span>
+            <span class="ticker-dot">✦</span>
+          </span>
+          {% endfor %}
+        </span>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  {# ─── PRAYER TIMES ────────────────────────────────────── #}
+  <section id="prayer-times" class="section">
+    <div class="section-head">
+      <p class="section-head-arabic">أوقات الصلاة</p>
+      <h2 class="section-head-title">Prayer Times</h2>
+      <div class="section-rule"></div>
+    </div>
+
+    <div class="prayer-grid">
+      {% for p in prayers %}
+      <div class="prayer-card{{ ' prayer-card--active' if p.active else '' }}">
+        {% if p.active %}
+        <span class="prayer-badge">Next</span>
+        {% endif %}
+        <p class="prayer-arabic">{{ p.arabic }}</p>
+        <p class="prayer-name">{{ p.name }}</p>
+        <p class="prayer-time">{{ p.time }}</p>
+        <p class="prayer-iqama">Iqama {{ p.iqama }}</p>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="jummah-strip">
+      <div>
+        <p class="jummah-strip-arabic">صلاة الجمعة</p>
+        <p class="jummah-strip-label">Jumu'ah · Every Friday</p>
+      </div>
+      <div class="jummah-strip-block">
+        <p class="jummah-strip-caption">Khutbah</p>
+        <p class="jummah-strip-time jummah-strip-time--white">13:15</p>
+      </div>
+      <div class="jummah-strip-divider"></div>
+      <div class="jummah-strip-block">
+        <p class="jummah-strip-caption">Salah</p>
+        <p class="jummah-strip-time jummah-strip-time--gold">13:45</p>
+      </div>
+    </div>
+  </section>
+
+  {# ─── JUMU'AH COLLECTION ──────────────────────────────── #}
+  <section class="section--alt">
+    <div class="section-inner">
+      <div class="section-head">
+        <p class="section-head-arabic">صدقات الجمعة</p>
+        <h2 class="section-head-title">Jumu'ah Collection</h2>
+        <div class="section-rule"></div>
+      </div>
+
+      <div class="collection-grid">
+        <div class="collection-card collection-card--dark">
+          <p class="collection-arabic">هذا الأسبوع</p>
+          <p class="collection-label">This Week</p>
+          <p class="collection-amount">{{ jumma.this_week }}</p>
+        </div>
+        <div class="collection-card collection-card--light">
+          <p class="collection-arabic">الأسبوع الماضي</p>
+          <p class="collection-label">Last Week</p>
+          <p class="collection-amount">{{ jumma.last_week }}</p>
+        </div>
+        <div class="collection-card collection-card--light">
+          <p class="collection-arabic">هذا الشهر</p>
+          <p class="collection-label">This Month</p>
+          <p class="collection-amount">{{ jumma.this_month }}</p>
+        </div>
+      </div>
+
+      <div class="goal-card">
+        <div class="goal-head">
+          <div>
+            <p class="goal-label">Monthly Goal</p>
+            <p class="goal-value">{{ jumma.goal }}</p>
+          </div>
+          <p class="goal-percent">{{ jumma.percent }}%</p>
+        </div>
+        {% set pct = (jumma.percent if jumma is defined and jumma else 0) | float %}
+        {% set pct = [[pct, 0] | max, 100] | min %}
+        <div class="progress-track">
+          <div class="progress-fill" data-percent="{{ pct }}"
+            role="progressbar" aria-valuenow="{{ pct | round(0) | int }}" aria-valuemin="0" aria-valuemax="100"></div>
+        </div>
+        <p class="goal-caption">{{ jumma.this_month }} raised of {{ jumma.goal }} target</p>
+      </div>
+    </div>
+  </section>
+
+  {# ─── SERVICES ────────────────────────────────────────── #}
+  <section id="services" class="section">
+    <div class="section-head">
+      <p class="section-head-arabic">خدماتنا</p>
+      <h2 class="section-head-title">Our Services</h2>
+      <div class="section-rule"></div>
+    </div>
+    <div class="services-grid">
+      {% set services = [
+      {"arabic": "نكاح نامہ", "title": "Nikah Nama", "desc": "Register your Islamic marriage certificate with our
+      qualified Imam.", "cta": "Apply Now", "action": "nikah", "img":
+      "https://images.unsplash.com/photo-1540567736792-f78f6242e4e0?w=600&h=400&fit=crop&auto=format", "alt": "Mosque
+      interior"},
+      {"arabic": "مدرسہ داخلہ", "title": "Madrasa Admissions", "desc": "Enrol your child in our Islamic education
+      programme for ages 5–16.", "cta": "Enrol Now", "action": "madrasa", "img":
+      "https://images.unsplash.com/photo-1758696642915-996112fc0bae?w=600&h=400&fit=crop&auto=format", "alt": "Ornate
+      mosque ceiling"},
+      {"arabic": "تبرع", "title": "Donate & Sadaqah", "desc": "Support your mosque — every contribution is an act of
+      worship.", "cta": "Give Now", "action": "donation", "img":
+      "https://images.unsplash.com/photo-1606981693736-62d6c4954ba5?w=600&h=400&fit=crop&auto=format", "alt": "Mosque
+      exterior"}
+      ] %}
+      {% for card in services %}
+      <div data-open-modal="{{ card.action }}" class="service-card">
+        <img src="{{ card.img }}" alt="{{ card.alt }}" class="service-img" />
+        <div class="service-scrim"></div>
+        <div class="service-body">
+          <p class="service-arabic">{{ card.arabic }}</p>
+          <h3 class="service-title">{{ card.title }}</h3>
+          <p class="service-desc">{{ card.desc }}</p>
+          <span class="service-cta">{{ card.cta }} →</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  {# ─── ANNOUNCEMENTS ───────────────────────────────────── #}
+  {% if notices %}
+  <section class="section--alt">
+    <div class="section-inner" style="max-width:768px;">
+      <div class="section-head" style="margin-bottom:2.5rem;">
+        <p class="section-head-arabic">إعلانات</p>
+        <h2 class="section-head-title" style="font-size:1.5rem;">Announcements</h2>
+      </div>
+      <div class="notice-list">
+        {% for n in notices %}
+        <div class="notice">
+          <span class="notice-icon">{{ n.icon }}</span>
+          <p class="notice-text">{{ n.text }}</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  {# ─── FOOTER ──────────────────────────────────────────── #}
+  <footer id="contact" class="site-footer">
+    <p class="footer-arabic">الله أكبر</p>
+    <p class="footer-translation">Allah is the Greatest</p>
+    <p class="footer-name">{{ mosque_name }}</p>
+    <p class="footer-line">{{ mosque_address }}</p>
+    <p class="footer-line">{{ mosque_email }} · {{ mosque_phone }}</p>
+    <div class="footer-rule"></div>
+    <p class="footer-copy">© {{ today.year }} {{ mosque_name }}. All rights reserved.</p>
+  </footer>
+</div>
+
+{# ─── MODALS ────────────────────────────────────────────── #}
+<div class="modal-overlay" id="modal-nikah" data-modal="nikah">
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="nikah-title">
+    <button type="button" data-close-modal class="modal-close">✕</button>
+    <p class="modal-arabic">تسجيل نكاح نامہ</p>
+    <h3 id="nikah-title" class="modal-title">Nikah Nama Registration</h3>
+    <form id="form-nikah" class="form-group" novalidate>
+      <div>
+        <label class="field-label" for="nikah-bride">Bride's Full Name</label>
+        <input id="nikah-bride" name="bride" type="text" required maxlength="120" class="field-input" />
+        <p class="field-error" data-error-for="bride"></p>
+      </div>
+      <div>
+        <label class="field-label" for="nikah-groom">Groom's Full Name</label>
+        <input id="nikah-groom" name="groom" type="text" required maxlength="120" class="field-input" />
+        <p class="field-error" data-error-for="groom"></p>
+      </div>
+      <div>
+        <label class="field-label" for="nikah-date">Preferred Date</label>
+        <input id="nikah-date" name="date" type="date" required class="field-input" />
+        <p class="field-error" data-error-for="date"></p>
+      </div>
+      <div>
+        <label class="field-label" for="nikah-contact">Contact Number</label>
+        <input id="nikah-contact" name="contact" type="tel" required maxlength="30" class="field-input" />
+        <p class="field-error" data-error-for="contact"></p>
+      </div>
+      <button type="submit" class="btn btn--gold form-submit">Submit Application</button>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-madrasa" data-modal="madrasa">
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="madrasa-title">
+    <button type="button" data-close-modal class="modal-close">✕</button>
+    <p class="modal-arabic">تسجيل في المدرسة</p>
+    <h3 id="madrasa-title" class="modal-title">Madrasa Admissions</h3>
+    <form id="form-madrasa" class="form-group" novalidate>
+      <div>
+        <label class="field-label" for="madrasa-name">Child's Full Name</label>
+        <input id="madrasa-name" name="name" type="text" required maxlength="120" class="field-input" />
+        <p class="field-error" data-error-for="name"></p>
+      </div>
+      <div>
+        <label class="field-label" for="madrasa-age">Child's Age</label>
+        <input id="madrasa-age" name="age" type="number" min="5" max="16" required class="field-input" />
+        <p class="field-error" data-error-for="age"></p>
+      </div>
+      <div>
+        <label class="field-label" for="madrasa-parent">Parent / Guardian Name</label>
+        <input id="madrasa-parent" name="parent" type="text" required maxlength="120" class="field-input" />
+        <p class="field-error" data-error-for="parent"></p>
+      </div>
+      <div>
+        <label class="field-label" for="madrasa-contact">Contact Number</label>
+        <input id="madrasa-contact" name="contact" type="tel" required maxlength="30" class="field-input" />
+        <p class="field-error" data-error-for="contact"></p>
+      </div>
+      <button type="submit" class="btn btn--gold form-submit">Submit Enrolment</button>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-donation" data-modal="donation">
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="donation-title">
+    <button type="button" data-close-modal class="modal-close">✕</button>
+    <p class="modal-arabic">تبرع للمسجد</p>
+    <h3 id="donation-title" class="modal-title">Donate to the Mosque</h3>
+
+    <div id="donation-success" class="donation-success">
+      <p class="donation-success-arabic">جزاك الله خيرًا</p>
+      <p class="donation-success-message" id="donation-success-message">May Allah reward you abundantly.</p>
+      <button type="button" data-close-modal class="donation-success-close">Close</button>
+    </div>
+
+    <form id="form-donation" class="form-group" novalidate>
+      <p class="donation-intro">
+        Your generosity keeps our mosque running, supports our Madrasa, and serves the community.
+      </p>
+      <div class="amount-grid" id="donation-amount-group">
+        {% for amt in [5, 10, 20, 50, 100] %}
+        <button type="button" data-amount="{{ amt }}" class="amount-btn">{{ currency_symbol }}{{ amt }}</button>
+        {% endfor %}
+        <button type="button" data-amount="other" class="amount-btn">Other</button>
+      </div>
+      <div id="donation-custom-amount" class="custom-amount">
+        <label class="field-label" for="donation-amount">Amount ({{ currency_symbol }})</label>
+        <input id="donation-amount" name="amount" type="number" min="1" max="100000" step="1" class="field-input" />
+      </div>
+      <p class="field-error" data-error-for="amount"></p>
+      <button type="submit" id="donation-submit" disabled class="btn btn--gold form-submit">
+        {{ 'Proceed to Payment' if razorpay_enabled else 'Record My Pledge' }}
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="application/json" id="site-config">
+{{ {
+  'razorpayEnabled': razorpay_enabled | default(false),
+  'razorpayKeyId': razorpay_key_id | default('', true),
+  'mosqueName': mosque_name | default('', true),
+  'currencySymbol': currency_symbol | default('₹', true)
+} | tojson }}
+</script>
+<script>
+  window.__SITE__ = JSON.parse(document.getElementById('site-config').textContent);
+
+  document.querySelectorAll('.progress-fill').forEach(function (el) {
+    var p = parseFloat(el.dataset.percent) || 0;
+    el.style.width = Math.min(Math.max(p, 0), 100) + '%';
+  });
+
+  // Generic modal open/close (in case main.js doesn't already do this)
+  document.querySelectorAll('[data-open-modal]').forEach(function (trigger) {
+    trigger.addEventListener('click', function () {
+      var modal = document.getElementById('modal-' + trigger.dataset.openModal);
+      if (modal) modal.classList.add('is-open');
+    });
+  });
+  document.querySelectorAll('[data-close-modal]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      btn.closest('.modal-overlay').classList.remove('is-open');
+    });
+  });
+  document.querySelectorAll('.modal-overlay').forEach(function (overlay) {
+    overlay.addEventListener('click', function (e) {
+      if (e.target === overlay) overlay.classList.remove('is-open');
+    });
+  });
+
+  // Donation amount selection (in case main.js doesn't already do this)
+  document.querySelectorAll('.amount-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.amount-btn').forEach(function (b) { b.classList.remove('is-selected'); });
+      btn.classList.add('is-selected');
+      var customWrap = document.getElementById('donation-custom-amount');
+      var submitBtn = document.getElementById('donation-submit');
+      if (btn.dataset.amount === 'other') {
+        customWrap.classList.add('is-visible');
+        submitBtn.disabled = true;
+      } else {
+        customWrap.classList.remove('is-visible');
+        submitBtn.disabled = false;
+      }
+    });
+  });
+</script>
+{% if razorpay_enabled %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+{% endif %}
+{% endblock %}
