@@ -10,3 +10,4 @@ node_modules/
 app/static/css/tailwind.css
 .DS_Store
 *.log
+\migrations

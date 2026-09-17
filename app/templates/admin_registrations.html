@@ -6,7 +6,8 @@
 
   Expected context from the view:
     mosque_name      -> str
-    today            -> python datetime (for the header date)
+    today             -> python datetime (kept for compatibility; not used for display)
+    today_display     -> str, pre-formatted date (e.g. "Thursday, 17 September 2026")
     registrations    -> list[dict], each shaped like:
         {
           "id":          "REG-0182",
@@ -332,7 +333,7 @@
       <div>
         <p class="eyebrow-ar">التسجيلات</p>
         <h1>Registrations</h1>
-        <p class="topbar-date">{{ today.strftime('%A, %-d %B %Y') if today is defined else '' }}</p>
+        <p class="topbar-date">{{ today_display|default('') }}</p>
       </div>
       {% if admin_username is defined and admin_username %}
       <div class="session-bar">
@@ -708,4 +709,5 @@
 })();
 </script>
 </body>
+
 </html>

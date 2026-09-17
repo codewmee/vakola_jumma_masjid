@@ -29,7 +29,6 @@ WIRE-UP CHECKLIST
   6. Drop admin_login.html and admin_registrations.html into
      app/templates/ (already there if you used the files as delivered).
 """
-
 from datetime import datetime
 from functools import wraps
 
@@ -40,7 +39,7 @@ from flask import (
 )
 
 from app.extensions import db, limiter
-from app.models import AdminUser, Registration
+from app.models import Admin as AdminUser, NikahApplication, MadrasaApplication
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -90,17 +89,25 @@ def logout():
 @admin_bp.route("/registrations")
 @login_required
 def dashboard():
-    regs = Registration.query.order_by(Registration.submitted_at.desc()).all()
+    nikah_rows = [r.to_row() for r in NikahApplication.query.order_by(NikahApplication.created_at.desc()).all()]
+    madrasa_rows = [r.to_row() for r in MadrasaApplication.query.order_by(MadrasaApplication.created_at.desc()).all()]
+    combined = sorted(nikah_rows + madrasa_rows, key=lambda row: row["submitted_at"], reverse=True)
+
+    now = datetime.utcnow()
+    # %-d (no-leading-zero day) isn't supported by strftime on Windows —
+    # build the display string manually instead of formatting it in the template.
+    today_display = now.strftime("%A, ") + str(now.day) + now.strftime(" %B %Y")
     return render_template(
         "admin_registrations.html",
-        registrations=[r.to_row() for r in regs],
+        registrations=combined,
         mosque_name=current_app.config.get("MOSQUE_NAME", "Masjid"),
-        today=datetime.utcnow(),
+        today=now,
+        today_display=today_display,
         admin_username=session.get("admin_username"),
     )
 
 
-@admin_bp.route("/registrations/<int:reg_id>/status", methods=["POST"])
+@admin_bp.route("/registrations/<string:reg_id>/status", methods=["POST"])
 @login_required
 def update_status(reg_id):
     payload = request.get_json(silent=True) or {}
@@ -108,7 +115,19 @@ def update_status(reg_id):
     if new_status not in ("pending", "contacted", "approved"):
         return jsonify({"error": "Invalid status"}), 400
 
-    reg = Registration.query.get_or_404(reg_id)
+    try:
+        kind, numeric_id = reg_id.split("-", 1)
+        numeric_id = int(numeric_id)
+    except ValueError:
+        return jsonify({"error": "Invalid registration id"}), 400
+
+    if kind == "nikah":
+        reg = NikahApplication.query.get_or_404(numeric_id)
+    elif kind == "madrasa":
+        reg = MadrasaApplication.query.get_or_404(numeric_id)
+    else:
+        return jsonify({"error": "Invalid registration id"}), 400
+
     reg.status = new_status
     db.session.commit()
     return jsonify({"ok": True, "id": reg_id, "status": new_status})
