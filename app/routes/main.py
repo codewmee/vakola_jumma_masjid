@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 
 from flask import Blueprint, render_template, current_app
 from sqlalchemy import func, extract
@@ -14,7 +14,7 @@ def _jumma_stats():
     cfg = current_app.config
     today = date.today()
     this_week_start = JummaCollection.week_start(today)
-    last_week_start = this_week_start - __import__("datetime").timedelta(days=7)
+    last_week_start = this_week_start - timedelta(days=7)
 
     def sum_for(start=None, end=None, month=None, year=None):
         q = db.session.query(func.coalesce(func.sum(JummaCollection.amount), 0))
