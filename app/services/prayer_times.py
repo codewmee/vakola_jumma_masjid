@@ -1,14 +1,17 @@
 """Fetches daily prayer (Azan) times from the Aladhan API and combines them
-with mosque-specific Iqama offsets stored in the database.
+with mosque-specific Iqama settings stored in the database. Either can be
+overridden per prayer via IqamaSetting.azan_source ("api" | "manual").
 
 The Aladhan API is free, keyless, and widely used for this purpose:
 https://aladhan.com/prayer-times-api
 
-Results are cached in-process for PRAYER_TIMES_CACHE_SECONDS to avoid
-hammering the upstream API on every page load. If the upstream call fails
-(network issue, rate limit, etc.) we fall back to the last successfully
-cached value, and if none exists yet, to a safe static default so the page
-never breaks.
+If every prayer is set to "manual" Azan, the Aladhan API is never called at
+all — useful if you haven't configured MOSQUE_LAT/MOSQUE_LNG yet, or simply
+don't want to depend on it. Results are cached in-process for
+PRAYER_TIMES_CACHE_SECONDS to avoid hammering the upstream API on every page
+load. If the upstream call fails (network issue, rate limit, missing config,
+etc.) we fall back to the last successfully cached value, and if none exists
+yet, to a safe static default so the page never breaks.
 """
 
 from __future__ import annotations
@@ -33,7 +36,7 @@ PRAYER_ARABIC = {
     "Isha": "العشاء",
 }
 
-# Fallback used only if the Aladhan API is unreachable and no cache exists.
+# Fallback used only if the Aladhan API is unreachable/unconfigured and no cache exists.
 _FALLBACK_TIMES = {
     "Fajr": "05:12",
     "Dhuhr": "12:30",
@@ -55,14 +58,15 @@ class PrayerRow(TypedDict):
 
 def _fetch_from_aladhan(for_date: date) -> dict | None:
     cfg = current_app.config
-    url = f"{cfg['ALADHAN_BASE_URL']}/timings/{for_date.strftime('%d-%m-%Y')}"
-    params = {
-        "latitude": cfg["MOSQUE_LAT"],
-        "longitude": cfg["MOSQUE_LNG"],
-        "method": cfg["ALADHAN_METHOD"],
-        "school": cfg["ALADHAN_SCHOOL"],
-    }
     try:
+        base_url = cfg["ALADHAN_BASE_URL"]
+        params = {
+            "latitude": cfg["MOSQUE_LAT"],
+            "longitude": cfg["MOSQUE_LNG"],
+            "method": cfg["ALADHAN_METHOD"],
+            "school": cfg["ALADHAN_SCHOOL"],
+        }
+        url = f"{base_url}/timings/{for_date.strftime('%d-%m-%Y')}"
         resp = requests.get(url, params=params, timeout=6)
         resp.raise_for_status()
         payload = resp.json()
@@ -70,7 +74,7 @@ def _fetch_from_aladhan(for_date: date) -> dict | None:
         # Aladhan returns "HH:MM (TZ)" sometimes — strip anything after a space.
         return {k: v.split(" ")[0] for k, v in timings.items()}
     except (requests.RequestException, KeyError, ValueError) as exc:
-        logger.warning("Aladhan API fetch failed: %s", exc)
+        logger.warning("Aladhan API fetch failed or not configured: %s", exc)
         return None
 
 
@@ -93,7 +97,7 @@ def get_raw_timings(force_refresh: bool = False) -> tuple[dict, date]:
         _cache.update(fetched_at=time.time(), date=today, timings=timings)
         return timings, today
 
-    # Upstream failed — serve stale cache if we have one, else static fallback.
+    # Upstream failed or isn't configured — serve stale cache if we have one, else static fallback.
     if _cache["timings"] is not None:
         logger.info("Serving stale cached prayer times after upstream failure.")
         return _cache["timings"], _cache["date"]
@@ -107,12 +111,9 @@ def _parse_hhmm(value: str) -> dtime:
     return dtime(int(h), int(m))
 
 
-def _apply_iqama(prayer_name: str, azan_time: dtime) -> dtime:
-    from app.models import IqamaSetting
-
-    setting = IqamaSetting.query.filter_by(prayer_name=prayer_name).first()
+def _compute_iqama(prayer_name: str, azan_time: dtime, setting) -> dtime:
+    """setting is an IqamaSetting row, or None if not yet configured."""
     if setting is None:
-        # Sensible defaults if the DB hasn't been seeded yet.
         default_offsets = {"Fajr": 15, "Dhuhr": 15, "Asr": 12, "Maghrib": 5, "Isha": 15}
         offset = default_offsets.get(prayer_name, 15)
         total_minutes = azan_time.hour * 60 + azan_time.minute + offset
@@ -127,15 +128,35 @@ def _apply_iqama(prayer_name: str, azan_time: dtime) -> dtime:
 
 def get_today_prayers() -> list[PrayerRow]:
     """Returns the 5 daily prayers with Azan + Iqama times, current one flagged active."""
-    timings, _ = get_raw_timings()
+    from app.models import IqamaSetting
+
+    settings = {s.prayer_name: s for s in IqamaSetting.query.all()}
+
+    # Only hit the Aladhan API if at least one prayer actually needs it —
+    # prayers with no setting yet default to "api" (back-compat), so an
+    # unconfigured mosque still gets automatic times until they customise.
+    needs_api = any(
+        settings.get(name) is None or settings[name].azan_source != "manual"
+        for name in PRAYER_ORDER
+    )
+    timings: dict = {}
+    if needs_api:
+        timings, _ = get_raw_timings()
+
     tz = ZoneInfo(current_app.config["MOSQUE_TIMEZONE"])
     now = datetime.now(tz).time()
 
     rows: list[PrayerRow] = []
     for name in PRAYER_ORDER:
-        azan_str = timings.get(name, _FALLBACK_TIMES[name])
-        azan_time = _parse_hhmm(azan_str)
-        iqama_time = _apply_iqama(name, azan_time)
+        setting = settings.get(name)
+
+        if setting is not None and setting.azan_source == "manual" and setting.manual_azan_time is not None:
+            azan_time = setting.manual_azan_time
+        else:
+            azan_str = timings.get(name, _FALLBACK_TIMES[name])
+            azan_time = _parse_hhmm(azan_str)
+
+        iqama_time = _compute_iqama(name, azan_time, setting)
         rows.append(
             PrayerRow(
                 name=name,

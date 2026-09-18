@@ -31,17 +31,29 @@ class RegistrationKind(str, Enum):
 
 
 class IqamaSetting(db.Model):
-    """Mosque-specific Iqama (congregation) time per prayer.
+    """Mosque-specific prayer time settings, per prayer.
 
-    mode="offset": iqama = azan time + offset_minutes
-    mode="fixed":  iqama = fixed_time (ignores azan time), e.g. Jumu'ah salah
+    Azan (call to prayer):
+      azan_source="api":    fetched from Aladhan, recalculated daily
+      azan_source="manual": manual_azan_time is used instead, every day,
+                             until changed here (e.g. the mosque's actual
+                             announced time differs from the calculated one)
+
+    Iqama (congregation start) — always locally configured, never from
+    an API, since no external service can know a specific mosque's practice:
+      mode="offset": iqama = azan time + offset_minutes
+      mode="fixed":  iqama = fixed_time (ignores azan time), e.g. Jumu'ah salah
     """
 
     __tablename__ = "iqama_settings"
 
     id = db.Column(db.Integer, primary_key=True)
     prayer_name = db.Column(db.String(20), unique=True, nullable=False)
-    mode = db.Column(db.String(10), nullable=False, default="offset")
+
+    azan_source = db.Column(db.String(10), nullable=False, default="api")  # "api" | "manual"
+    manual_azan_time = db.Column(db.Time, nullable=True)
+
+    mode = db.Column(db.String(10), nullable=False, default="offset")  # "offset" | "fixed"
     offset_minutes = db.Column(db.Integer, nullable=False, default=15)
     fixed_time = db.Column(db.Time, nullable=True)
 

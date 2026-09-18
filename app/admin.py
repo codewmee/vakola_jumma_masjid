@@ -29,7 +29,7 @@ WIRE-UP CHECKLIST
   6. Drop admin_login.html and admin_registrations.html into
      app/templates/ (already there if you used the files as delivered).
 """
-from datetime import datetime
+from datetime import datetime, time as dtime
 from functools import wraps
 
 import click
@@ -39,7 +39,8 @@ from flask import (
 )
 
 from app.extensions import db, limiter
-from app.models import Admin as AdminUser, NikahApplication, MadrasaApplication
+from app.models import Admin as AdminUser, NikahApplication, MadrasaApplication, IqamaSetting
+from app.services.prayer_times import PRAYER_ORDER, PRAYER_ARABIC
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -104,6 +105,7 @@ def dashboard():
         today=now,
         today_display=today_display,
         admin_username=session.get("admin_username"),
+        active_page="registrations",
     )
 
 
@@ -131,6 +133,129 @@ def update_status(reg_id):
     reg.status = new_status
     db.session.commit()
     return jsonify({"ok": True, "id": reg_id, "status": new_status})
+
+
+@admin_bp.route("/users")
+@login_required
+def users():
+    admins = AdminUser.query.order_by(AdminUser.username.asc()).all()
+    return render_template(
+        "admin_users.html",
+        admins=admins,
+        mosque_name=current_app.config.get("MOSQUE_NAME", "Masjid"),
+        admin_username=session.get("admin_username"),
+        current_admin_id=session.get("admin_id"),
+        active_page="users",
+    )
+
+
+@admin_bp.route("/users/create", methods=["POST"])
+@login_required
+def create_user():
+    username = request.form.get("username", "").strip()
+    password = request.form.get("password", "")
+    confirm_password = request.form.get("confirm_password", "")
+
+    if not username or not password:
+        flash("Username and password are required.", "error")
+    elif len(password) < 8:
+        flash("Password must be at least 8 characters.", "error")
+    elif password != confirm_password:
+        flash("Passwords do not match.", "error")
+    elif AdminUser.query.filter_by(username=username).first():
+        flash(f"'{username}' is already taken.", "error")
+    else:
+        user = AdminUser(username=username)
+        user.set_password(password)
+        db.session.add(user)
+        db.session.commit()
+        flash(f"Admin '{username}' added.", "success")
+
+    return redirect(url_for("admin.users"))
+
+
+@admin_bp.route("/users/<int:admin_id>/delete", methods=["POST"])
+@login_required
+def delete_user(admin_id):
+    if admin_id == session.get("admin_id"):
+        flash("You can't remove your own account while logged in.", "error")
+        return redirect(url_for("admin.users"))
+
+    if AdminUser.query.count() <= 1:
+        flash("At least one admin account must remain.", "error")
+        return redirect(url_for("admin.users"))
+
+    user = AdminUser.query.get_or_404(admin_id)
+    username = user.username
+    db.session.delete(user)
+    db.session.commit()
+    flash(f"Admin '{username}' removed.", "success")
+    return redirect(url_for("admin.users"))
+
+
+@admin_bp.route("/prayer-times", methods=["GET", "POST"])
+@login_required
+def prayer_times():
+    settings = {s.prayer_name: s for s in IqamaSetting.query.all()}
+    for name in PRAYER_ORDER:
+        if name not in settings:
+            s = IqamaSetting(prayer_name=name, azan_source="api", mode="offset", offset_minutes=15)
+            db.session.add(s)
+            settings[name] = s
+    db.session.commit()
+
+    if request.method == "POST":
+        had_error = False
+        for name in PRAYER_ORDER:
+            s = settings[name]
+
+            azan_source = request.form.get(f"{name}_azan_source", "api")
+            s.azan_source = azan_source if azan_source in ("api", "manual") else "api"
+
+            if s.azan_source == "manual":
+                raw = request.form.get(f"{name}_manual_azan_time", "").strip()
+                try:
+                    h, m = raw.split(":")
+                    s.manual_azan_time = dtime(int(h), int(m))
+                except (ValueError, AttributeError):
+                    flash(f"Please enter a valid manual Azan time for {name}.", "error")
+                    had_error = True
+                    continue
+
+            iqama_mode = request.form.get(f"{name}_iqama_mode", "offset")
+            s.mode = iqama_mode if iqama_mode in ("offset", "fixed") else "offset"
+
+            if s.mode == "offset":
+                try:
+                    s.offset_minutes = int(request.form.get(f"{name}_offset_minutes", 15))
+                except ValueError:
+                    flash(f"Please enter a valid Iqama offset (minutes) for {name}.", "error")
+                    had_error = True
+                    continue
+            else:
+                raw = request.form.get(f"{name}_fixed_time", "").strip()
+                try:
+                    h, m = raw.split(":")
+                    s.fixed_time = dtime(int(h), int(m))
+                except (ValueError, AttributeError):
+                    flash(f"Please enter a valid fixed Iqama time for {name}.", "error")
+                    had_error = True
+                    continue
+
+        db.session.commit()
+        if not had_error:
+            flash("Prayer time settings saved.", "success")
+        return redirect(url_for("admin.prayer_times"))
+
+    return render_template(
+        "admin_prayer_times.html",
+        settings=settings,
+        prayer_order=PRAYER_ORDER,
+        prayer_arabic=PRAYER_ARABIC,
+        mosque_name=current_app.config.get("MOSQUE_NAME", "Masjid"),
+        admin_username=session.get("admin_username"),
+        active_page="prayer_times",
+    )
 
 
 @admin_bp.cli.command("create-admin")
