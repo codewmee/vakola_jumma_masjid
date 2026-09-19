@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
-    href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Scheherazade+New:wght@500;600&family=Outfit:wght@400;500;600;700&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Noto+Nastaliq+Urdu:wght@400;500;600;700&family=Scheherazade+New:wght@500;600&family=Outfit:wght@400;500;600;700&display=swap"
     rel="stylesheet">
   <meta name="csrf-token" content="{{ csrf_token() if csrf_token is defined else '' }}">
   <style>
@@ -782,6 +782,29 @@
       background: #875f1c;
     }
 
+    /* solid green submit button used on the certificate preview */
+      .btn-glass--submit {
+      background: #17722f;
+      border-color: #17722f;
+      color: #fff;
+      box-shadow: none;
+    }
+
+    .btn-glass--submit:hover {
+      background: #0f5a24;
+    }
+
+    .btn-glass--danger {
+      background: rgba(163, 64, 31, 0.10);
+      border-color: rgba(163, 64, 31, 0.35);
+      color: #a3401f;
+      box-shadow: none;
+    }
+
+    .btn-glass--danger:hover {
+      background: rgba(163, 64, 31, 0.18);
+    }
+
     .topbar-new-btn {
       background: var(--moss-700);
       border-color: var(--moss-700);
@@ -811,9 +834,35 @@
       display: flex;
     }
 
-    /* the certificate preview sits on top of the new-registration modal */
+     /* the certificate preview sits on top of the new-registration modal */
     #cert-preview-modal {
       z-index: 90;
+    }
+
+    /* These two carry the longest forms (the full Nikah Nama, the cert
+       preview) — a fixed max-width card made them feel cramped with all
+       those fields stacked up. Give them the whole viewport instead. */
+    #new-reg-modal.modal-overlay,
+    #cert-preview-modal.modal-overlay {
+      padding: 0;
+    }
+
+    #new-reg-modal .modal-glass,
+    #cert-preview-modal .modal-glass {
+      width: 100%;
+      height: 100%;
+      max-width: 100%;
+      max-height: 100%;
+      border-radius: 0;
+    }
+
+    @media (min-width: 900px) {
+
+      #new-reg-modal .modal-glass,
+      #cert-preview-modal .modal-glass {
+        padding-left: 8vw;
+        padding-right: 8vw;
+      }
     }
 
     .modal-glass {
@@ -1049,6 +1098,15 @@
       background: var(--line);
     }
 
+    .cert-form-section-title .title-ur {
+      font-family: 'Noto Nastaliq Urdu', 'Scheherazade New', serif;
+      font-size: 0.95rem;
+      letter-spacing: 0;
+      text-transform: none;
+      color: var(--moss-600);
+      line-height: 1.6;
+    }
+
     .cert-grid {
       display: grid;
       grid-template-columns: 1.3fr 0.7fr 1.6fr;
@@ -1073,11 +1131,40 @@
       }
     }
 
+    /* person block: English name | Urdu name | age, then English address | Urdu address */
+    .person-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 90px;
+      gap: 12px;
+    }
+
+    .person-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    @media (max-width:640px) {
+
+      .person-grid,
+      .person-grid-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+
     .field-label {
       font-size: 0.76rem;
       color: var(--moss-600);
       margin: 0 0 5px;
       display: block;
+    }
+
+    .field-label.ur-label {
+      font-family: 'Noto Nastaliq Urdu', 'Scheherazade New', serif;
+      font-size: 0.86rem;
+      text-align: right;
+      line-height: 1.7;
     }
 
     .field-input,
@@ -1090,6 +1177,14 @@
       border-radius: 10px;
       padding: 10px 12px;
       background: #fdfdfb;
+    }
+
+    .field-input.field-ur {
+      font-family: 'Noto Nastaliq Urdu', 'Scheherazade New', serif;
+      font-size: 1rem;
+      text-align: right;
+      direction: rtl;
+      padding: 6px 12px;
     }
 
     .field-input:focus {
@@ -1139,7 +1234,7 @@
       }
     }
 
-    /* ---------- certificate preview ---------- */
+    /* ---------- generic certificate preview (Madrasa) ---------- */
     .cert-sheet {
       border: 3px double var(--moss-600);
       border-radius: 6px;
@@ -1200,56 +1295,6 @@
       color: var(--moss-700);
     }
 
-    .cert-nos {
-      display: flex;
-      justify-content: space-between;
-      gap: 16px;
-      margin: 18px 0;
-      flex-wrap: wrap;
-    }
-
-    .cert-no-box {
-      flex: 1;
-      min-width: 140px;
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      padding: 10px 14px;
-      text-align: center;
-      background: #fff;
-    }
-
-    .cert-no-box p {
-      margin: 0;
-    }
-
-    .cert-no-box .cert-no-label {
-      font-size: 0.68rem;
-      color: var(--moss-500);
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-
-    .cert-no-box .cert-no-value {
-      font-family: 'Cinzel', serif;
-      font-size: 1.1rem;
-      color: var(--moss-700);
-      margin-top: 2px;
-    }
-
-    .cert-datetime {
-      display: flex;
-      justify-content: center;
-      gap: 22px;
-      flex-wrap: wrap;
-      font-size: 0.86rem;
-      color: var(--moss-600);
-      margin-bottom: 18px;
-    }
-
-    .cert-datetime strong {
-      color: var(--moss-700);
-    }
-
     .cert-table {
       width: 100%;
       border-collapse: collapse;
@@ -1301,67 +1346,508 @@
       font-style: italic;
     }
 
-    .cert-maher {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      flex-wrap: wrap;
-      background: var(--moss-50);
-      border-radius: 10px;
-      padding: 14px 18px;
-      margin-bottom: 18px;
-    }
-
-    .cert-maher p {
-      margin: 0;
-    }
-
-    .cert-maher-amount {
-      font-family: 'Cinzel', serif;
-      font-size: 1.3rem;
-      color: var(--moss-700);
-    }
-
-    .cert-maher-type {
-      font-size: 0.8rem;
-      color: var(--gold-600);
-      font-weight: 500;
-    }
-
-    .cert-qazi {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-      font-size: 0.86rem;
-      color: var(--moss-600);
-      margin-bottom: 6px;
-    }
-
-    @media (max-width:520px) {
-      .cert-qazi {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .cert-qazi strong {
-      color: var(--moss-700);
-    }
-
-    .cert-signature-line {
-      border-bottom: 1px solid var(--moss-400);
-      min-width: 160px;
-      display: inline-block;
-      padding-bottom: 2px;
-      font-family: 'EB Garamond', serif;
-      font-style: italic;
-    }
-
     .cert-footer-note {
       text-align: center;
       font-size: 0.72rem;
       color: var(--moss-400);
       margin-top: 16px;
+    }
+
+    /* =====================================================================
+       NIKAH NAMA — mirrors the paper design (green ornate frame, Urdu + English)
+       ===================================================================== */
+    .nk-wrap {
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+
+    .nk-cert {
+      --nk-green: #17722f;
+      --nk-green-deep: #0f5a24;
+      --nk-navy: #1c2f66;
+      --nk-ink: #1d2a1f;
+      --nk-muted: #4b5a4e;
+      --nk-hair: #c5cdc2;
+      min-width: 720px;
+      padding: 24px;
+      color: var(--nk-ink);
+      direction: ltr;
+      border: 2px solid var(--nk-green);
+      background-color: #fff;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='%2317722f' stroke-width='1.4'%3E%3Ccircle cx='12' cy='12' r='3.2'/%3E%3Ccircle cx='12' cy='5' r='2.8'/%3E%3Ccircle cx='12' cy='19' r='2.8'/%3E%3Ccircle cx='5' cy='12' r='2.8'/%3E%3Ccircle cx='19' cy='12' r='2.8'/%3E%3C/g%3E%3Ccircle cx='12' cy='12' r='1.1' fill='%2317722f'/%3E%3C/svg%3E");
+      background-size: 24px 24px;
+      background-repeat: round;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .nk-inner {
+      background: #fff;
+      border: 2px solid var(--nk-green);
+      padding: 14px 16px 16px;
+    }
+
+    .nk-cert .nk-ur,
+    .nk-cert .nk-ur-val,
+    .nk-cert .nk-l-ur,
+    .nk-cert .nk-flabel-ur {
+      font-family: 'Noto Nastaliq Urdu', 'Scheherazade New', serif;
+    }
+
+    /* header + arch */
+    .nk-head {
+      position: relative;
+      text-align: center;
+      min-height: 205px;
+    }
+
+    .nk-arch {
+      position: absolute;
+      left: 11%;
+      right: 11%;
+      top: 52px;
+      bottom: 0;
+      border: 2px solid var(--nk-green);
+      border-bottom: 0;
+      border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+      pointer-events: none;
+    }
+
+    .nk-bismillah {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      margin: 0;
+      font-family: 'Noto Nastaliq Urdu', 'Scheherazade New', serif;
+      font-size: 1.05rem;
+      line-height: 2;
+      color: var(--nk-green);
+    }
+
+    .nk-hadith {
+      position: absolute;
+      margin: 0;
+      width: 27%;
+      font-family: 'Noto Nastaliq Urdu', 'Scheherazade New', serif;
+      font-size: 1.05rem;
+      font-weight: 600;
+      line-height: 1.9;
+      color: var(--nk-navy);
+      direction: rtl;
+    }
+
+    .nk-hadith-r {
+      right: 0;
+      top: 30px;
+      text-align: right;
+      transform: rotate(10deg);
+      transform-origin: 100% 0;
+    }
+
+    .nk-hadith-l {
+      left: 0;
+      top: 44px;
+      text-align: left;
+      transform: rotate(-10deg);
+      transform-origin: 0 0;
+    }
+
+    .nk-title-ur {
+      position: relative;
+      margin: 0;
+      padding-top: 58px;
+      font-family: 'Noto Nastaliq Urdu', 'Scheherazade New', serif;
+      font-size: 3.1rem;
+      font-weight: 700;
+      line-height: 1.7;
+      color: var(--nk-green);
+    }
+
+    .nk-title-en {
+      position: relative;
+      margin: 0 0 12px;
+      font-family: 'Cinzel', serif;
+      font-weight: 800;
+      font-size: 1.9rem;
+      letter-spacing: 0.04em;
+      color: var(--nk-green);
+    }
+
+    /* table body */
+    .nk-table {
+      border: 1.5px solid var(--nk-green);
+    }
+
+    .nk-row {
+      border-top: 1.5px solid var(--nk-green);
+    }
+
+    .nk-table>.nk-row:first-child {
+      border-top: 0;
+    }
+
+    .nk-en {
+      font-size: 0.98rem;
+      line-height: 1.5;
+      direction: ltr;
+      text-align: left;
+    }
+
+    .nk-ur-val {
+      direction: rtl;
+      text-align: right;
+      font-size: 1.05rem;
+      line-height: 2;
+      color: var(--nk-ink);
+    }
+
+    .nk-en span,
+    .nk-ur-val span {
+      display: block;
+      font-weight: 400;
+      color: var(--nk-muted);
+    }
+
+    .nk-en span {
+      font-size: 0.84rem;
+    }
+
+    .nk-ur-val span {
+      font-size: 0.95rem;
+    }
+
+    .nk-blank {
+      color: transparent;
+    }
+
+    /* mosque + register row */
+    .nk-addr {
+      display: flex;
+      direction: rtl;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 10px 16px;
+    }
+
+    .nk-addr-main {
+      text-align: right;
+    }
+
+    .nk-addr-main .nk-ur-val {
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--nk-green-deep);
+      line-height: 1.9;
+    }
+
+    .nk-en-line {
+      direction: ltr;
+      text-align: right;
+      font-size: 0.86rem;
+      color: var(--nk-ink);
+    }
+
+    .nk-addr-reg {
+      display: flex;
+      direction: rtl;
+      align-items: center;
+      gap: 10px;
+      white-space: nowrap;
+    }
+
+    .nk-addr-reg .nk-ur {
+      font-size: 1rem;
+      color: var(--nk-green-deep);
+    }
+
+    .nk-addr-reg strong {
+      direction: ltr;
+      font-weight: 500;
+      font-size: 0.95rem;
+    }
+
+    /* number + date rows */
+    .nk-nos,
+    .nk-dt {
+      display: flex;
+      direction: rtl;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 12px 20px;
+    }
+
+    .nk-field {
+      display: flex;
+      direction: rtl;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .nk-flabel {
+      text-align: center;
+    }
+
+    .nk-flabel-ur {
+      display: block;
+      font-size: 1.2rem;
+      line-height: 1.9;
+      color: var(--nk-green-deep);
+    }
+
+    .nk-flabel-en {
+      display: block;
+      font-size: 0.68rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--nk-muted);
+    }
+
+    .nk-box {
+      min-width: 118px;
+      padding: 5px 12px;
+      border: 1px solid var(--nk-hair);
+      border-radius: 6px;
+      background: #fafbf9;
+      text-align: center;
+    }
+
+    .nk-box .nk-en,
+    .nk-box .nk-ur-val {
+      text-align: center;
+    }
+
+    .nk-box .nk-ur-val {
+      font-size: 0.95rem;
+      line-height: 1.9;
+    }
+
+    /* 3-column grid rows: label | data | signature (rtl = label on the right) */
+    .nk-grid {
+      display: grid;
+      grid-template-columns: 190px 1fr 150px;
+      direction: rtl;
+    }
+
+    .nk-grid>div:not(:last-child) {
+      border-left: 1.5px solid var(--nk-green);
+    }
+
+    .nk-label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      padding: 12px 10px;
+      text-align: center;
+    }
+
+    .nk-l-ur {
+      font-size: 1.02rem;
+      line-height: 2;
+      color: var(--nk-green-deep);
+    }
+
+    .nk-l-en {
+      font-size: 0.8rem;
+      line-height: 1.45;
+      color: var(--nk-ink);
+    }
+
+    .nk-data {
+      direction: ltr;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 6px;
+      padding: 12px 16px;
+      min-height: 56px;
+    }
+
+    .nk-data .nk-en strong,
+    .nk-data .nk-ur-val strong {
+      font-weight: 600;
+    }
+
+    .nk-sig {
+      display: flex;
+      padding: 10px;
+    }
+
+    .nk-sig-box {
+      flex: 1;
+      min-height: 76px;
+      border: 1px solid var(--nk-hair);
+      border-radius: 6px;
+      background: #fbfcfa;
+    }
+
+    .nk-sig-head {
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: 2px;
+      font-size: 0.78rem;
+    }
+
+    .nk-sig-head .nk-ur {
+      font-size: 1rem;
+      line-height: 1.9;
+      color: var(--nk-green-deep);
+    }
+
+    /* maher */
+    .nk-maher-types {
+      flex-direction: row;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px 26px;
+    }
+
+    .nk-cbi {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.86rem;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    .nk-cbi .nk-ur {
+      font-size: 1rem;
+      text-transform: none;
+      color: var(--nk-green-deep);
+    }
+
+    .nk-cb {
+      position: relative;
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      border: 1.5px solid var(--nk-green);
+      border-radius: 3px;
+      background: #fff;
+    }
+
+    .nk-cb.is-on::after {
+      content: '✓';
+      position: absolute;
+      inset: 0;
+      text-align: center;
+      line-height: 14px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--nk-green);
+    }
+
+    .nk-amount {
+      align-items: center;
+      gap: 8px;
+      direction: ltr;
+    }
+
+    .nk-rupee {
+      font-size: 1.1rem;
+      color: var(--nk-ink);
+    }
+
+    .nk-amount .nk-box {
+      flex: 1;
+      min-width: 0;
+    }
+
+    /* qazi + stamp */
+    .nk-qazi {
+      display: grid;
+      grid-template-columns: 1fr 190px;
+      direction: rtl;
+    }
+
+    .nk-qazi-fields {
+      padding: 6px 16px;
+      border-left: 1.5px solid var(--nk-green);
+    }
+
+    .nk-qline {
+      display: flex;
+      direction: rtl;
+      align-items: flex-end;
+      gap: 12px;
+      padding: 7px 0;
+    }
+
+    .nk-qlabel {
+      flex: 0 0 126px;
+      text-align: center;
+    }
+
+    .nk-qlabel .nk-flabel-ur {
+      font-size: 1.05rem;
+      line-height: 1.8;
+    }
+
+    .nk-qval {
+      flex: 1;
+      display: flex;
+      direction: ltr;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 12px;
+      min-height: 34px;
+      padding: 0 6px 2px;
+      border-bottom: 1px solid #9fb0a3;
+    }
+
+    .nk-qval .nk-ur-val {
+      font-size: 1rem;
+      line-height: 1.8;
+    }
+
+    .nk-signature {
+      font-family: 'EB Garamond', serif;
+      font-style: italic;
+      font-size: 1.15rem;
+    }
+
+    .nk-stamp {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 12px;
+      font-size: 0.78rem;
+      text-align: center;
+    }
+
+    .nk-stamp .nk-ur {
+      font-size: 1rem;
+      line-height: 1.8;
+      color: var(--nk-green-deep);
+    }
+
+    .nk-stamp-box {
+      width: 100%;
+      min-height: 104px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1.5px dashed #9fb0a3;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      color: #7d8f80;
+    }
+
+    .nk-note {
+      margin: 12px 0 0;
+      text-align: center;
+      font-size: 0.7rem;
+      color: #7d8f80;
     }
 
     /* ---------- misc ---------- */
@@ -1373,49 +1859,96 @@
       clip: rect(0 0 0 0);
     }
 
+    /* ---------- auto-Urdu row (Nikah form) ---------- */
+    .urdu-auto-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: -6px 0 20px;
+    }
+
+    .urdu-status {
+      font-size: 0.76rem;
+      color: var(--moss-500);
+    }
+
+    .urdu-status.is-error {
+      color: #a3401f;
+    }
+
     /* ---------- print ----------
-       Only hide the page when a modal print was explicitly triggered
-       (body.is-printing). A plain Ctrl+P prints the dashboard normally. */
+       body.is-printing is set only when a modal Print button is pressed; a plain Ctrl+P prints
+       the dashboard normally. While it is set, the dashboard and every other overlay are removed
+       from layout (display:none, not just hidden) so exactly one page is produced. */
+    @page {
+      size: A4;
+      margin: 8mm;
+    }
+
     @media print {
-
-      body.is-printing *,
-      body.is-printing *::before,
-      body.is-printing *::after {
-        visibility: hidden;
+      body.is-printing {
+        min-height: 0;
+        background: #fff !important;
       }
 
-      body.is-printing .print-target,
-      body.is-printing .print-target *,
-      body.is-printing .print-target *::before,
-      body.is-printing .print-target *::after {
-        visibility: visible;
+      body.is-printing .admin-shell,
+      body.is-printing .modal-overlay {
+        display: none !important;
       }
 
-      body.is-printing .print-target {
-        position: absolute;
-        inset: 0;
+      body.is-printing .modal-overlay.is-print-active {
+        display: block !important;
+        position: static;
+        inset: auto;
+        padding: 0;
+        overflow: visible;
+        background: none !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+      }
+
+      body.is-printing .is-print-active .modal-glass {
+        position: static;
         width: 100%;
         max-width: none;
         max-height: none;
         overflow: visible;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
         box-shadow: none;
-        border: none;
-        background: #fff;
-        padding: 20px;
+        background: #fff !important;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
         animation: none;
       }
 
-      body.is-printing .modal-close,
-      body.is-printing .modal-foot,
-      body.is-printing .reg-tabs {
+      body.is-printing #detail-modal.is-print-active .modal-glass {
+        padding: 6mm;
+      }
+
+      body.is-printing .is-print-active .modal-close,
+      body.is-printing .is-print-active .modal-foot,
+      body.is-printing .is-print-active .reg-tabs,
+      body.is-printing .is-print-active .nk-note,
+      body.is-printing .is-print-active #cert-preview-error {
         display: none !important;
       }
 
-      body.is-printing .modal-overlay {
-        background: none !important;
-        backdrop-filter: none !important;
-        -webkit-backdrop-filter: none !important;
-        padding: 0;
+      body.is-printing .is-print-active,
+      body.is-printing .is-print-active * {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      body.is-printing .nk-wrap {
+        overflow: visible !important;
+      }
+
+      body.is-printing .nk-row {
+        break-inside: avoid;
       }
     }
   </style>
@@ -1580,16 +2113,10 @@
               {% set search_blob = (primary ~ ' ' ~ (groom if is_nikah else parent_name) ~ ' ' ~ contact)|lower %}
               <tr class="reg-row" data-id="{{ r.id }}" data-dbid="{{ r.db_id|default(r.id) }}" data-type="{{ r.type }}"
                 data-status="{{ r.status }}" data-submitted="{{ r.submitted_at }}" data-search="{{ search_blob }}"
-                data-primary="{{ primary }}" data-secondary="{{ secondary }}" data-contact="{{ contact }}"
-                {% if is_nikah %}
-                data-field-bride="{{ bride }}"
-                data-field-groom="{{ groom }}"
-                data-field-nikahdate="{{ nikah_date }}"
-                {% else %}
-                data-field-child="{{ child_name }}"
-                data-field-age="{{ child_age }}"
-                data-field-parent="{{ parent_name }}"
-                {% endif %}>
+                data-primary="{{ primary }}" data-secondary="{{ secondary }}" data-contact="{{ contact }}" {% if
+                is_nikah %} data-field-bride="{{ bride }}" data-field-groom="{{ groom }}"
+                data-field-nikahdate="{{ nikah_date }}" {% else %} data-field-child="{{ child_name }}"
+                data-field-age="{{ child_age }}" data-field-parent="{{ parent_name }}" {% endif %}>
                 <td class="name-cell">
                   {{ primary }}
                   <span class="sub">{{ secondary }}</span>
@@ -1681,16 +2208,57 @@
             </svg>
             Call applicant
           </button>
-          <button type="button" class="btn-glass btn-glass--gold" id="modal-save-btn">
+                 <button type="button" class="btn-glass btn-glass--gold" id="modal-save-btn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M20 6 9 17l-5-5" />
             </svg>
             Save status
           </button>
+          <button type="button" class="btn-glass btn-glass--danger" id="modal-delete-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6" />
+              <path d="M10 11v6M14 11v6" />
+            </svg>
+            Delete
+          </button>
         </div>
       </div>
     </div>
   </div>
+
+  {# ─── person block used by the Nikah form: English name | Urdu name | age, English address | Urdu address ─── #}
+  {% macro person_block(key, title, title_ur, required=false) %}
+  <div class="cert-form-section">
+    <p class="cert-form-section-title">{{ title }} <span class="title-ur" lang="ur" dir="rtl">{{ title_ur }}</span></p>
+    <div class="person-grid">
+      <div>
+        <label class="field-label" for="n-{{ key }}-name">Full Name (English)</label>
+        <input id="n-{{ key }}-name" name="{{ key }}_name" type="text" maxlength="120" class="field-input" {% if
+          required %}required{% endif %}>
+      </div>
+      <div>
+        <label class="field-label ur-label" for="n-{{ key }}-name-ur">مکمل نام (اردو)</label>
+        <input id="n-{{ key }}-name-ur" name="{{ key }}_name_ur" type="text" maxlength="120"
+          class="field-input field-ur" dir="rtl" lang="ur">
+      </div>
+      <div>
+        <label class="field-label" for="n-{{ key }}-age">Age</label>
+        <input id="n-{{ key }}-age" name="{{ key }}_age" type="number" min="18" max="120" class="field-input">
+      </div>
+    </div>
+    <div class="person-grid-2">
+      <div>
+        <label class="field-label" for="n-{{ key }}-address">Address (English)</label>
+        <input id="n-{{ key }}-address" name="{{ key }}_address" type="text" class="field-input">
+      </div>
+      <div>
+        <label class="field-label ur-label" for="n-{{ key }}-address-ur">پتہ (اردو)</label>
+        <input id="n-{{ key }}-address-ur" name="{{ key }}_address_ur" type="text" class="field-input field-ur"
+          dir="rtl" lang="ur">
+      </div>
+    </div>
+  </div>
+  {% endmacro %}
 
   {# ─── NEW REGISTRATION MODAL (register someone directly, without a public submission) ─────── #}
   <div class="modal-overlay" id="new-reg-modal">
@@ -1703,7 +2271,8 @@
 
       <h3 id="new-reg-title" class="modal-title" style="margin-bottom:2px;">New Registration</h3>
       <p class="modal-meta" style="margin-bottom:18px;">Add a Nikah or Madrasa record directly — for walk-ins, phone
-        bookings, or paper forms you're entering after the fact.</p>
+        bookings, or paper forms you're entering after the fact. For Nikah, type names and addresses in English — the
+        Urdu fills in automatically and stays editable. Preview shows the Nikah Nama with both.</p>
 
       <div class="reg-tabs">
         <button type="button" class="reg-tab is-active" data-reg-tab="nikah">
@@ -1725,97 +2294,32 @@
       {# ── NIKAH NAMA FORM ── #}
       <form id="form-nikah-direct" novalidate>
 
-        <div class="cert-form-section">
-          <p class="cert-form-section-title">Register &amp; Ceremony</p>
-          <div class="cert-form-grid-3">
-            <div>
-              <label class="field-label" for="n-regno">Register No.</label>
-              <input id="n-regno" name="register_no" type="text" class="field-input" placeholder="e.g. 231">
-            </div>
-            <div>
-              <label class="field-label" for="n-serialno">Serial No.</label>
-              <input id="n-serialno" name="serial_no" type="text" class="field-input" placeholder="e.g. 0182">
-            </div>
-            <div>
-              <label class="field-label" for="n-location">Nikah Location</label>
-              <input id="n-location" name="nikah_location" type="text" class="field-input" placeholder="e.g. Main hall">
-            </div>
-          </div>
-          <div class="cert-form-grid-3" style="margin-top:12px;">
-            <div>
-              <label class="field-label" for="n-date">Nikah Date</label>
-              <input id="n-date" name="nikah_date" type="date" required class="field-input">
-            </div>
-            <div>
-              <label class="field-label" for="n-time">Time</label>
-              <input id="n-time" name="nikah_time" type="time" class="field-input">
-            </div>
+        <div class="urdu-auto-row">
+          <button type="button" class="btn-glass btn-glass--ghost" id="urdu-auto-btn"
+            style="padding:7px 14px;">Auto-fill
+            Urdu</button>
+          <span class="urdu-status" id="urdu-status" role="status"></span>
+        </div>
+
+                <div class="cert-grid-2">
             <div>
               <label class="field-label" for="n-contact">Contact Number</label>
               <input id="n-contact" name="contact" type="tel" required maxlength="30" class="field-input"
                 placeholder="For our records">
             </div>
           </div>
-        </div>
+        {{ person_block('groom', 'Groom', 'ناکح', true) }}
+        {{ person_block('bride', 'Bride', 'منکوحہ', true) }}
+        {{ person_block('vakil', 'Vakil (Wali / Representative)', 'وکیل') }}
 
         <div class="cert-form-section">
-          <p class="cert-form-section-title">Groom</p>
-          <div class="cert-grid">
-            <div><label class="field-label" for="n-groom-name">Full Name</label><input id="n-groom-name"
-                name="groom_name" type="text" required maxlength="120" class="field-input"></div>
-            <div><label class="field-label" for="n-groom-age">Age</label><input id="n-groom-age" name="groom_age"
-                type="number" min="18" max="120" class="field-input"></div>
-            <div><label class="field-label" for="n-groom-address">Address</label><input id="n-groom-address"
-                name="groom_address" type="text" class="field-input"></div>
-          </div>
+          <p class="cert-form-section-title">Witnesses <span class="title-ur" lang="ur" dir="rtl">گواہان</span></p>
         </div>
+        {{ person_block('witness1', 'Witness 1', 'گواہ اول') }}
+        {{ person_block('witness2', 'Witness 2', 'گواہ دوم') }}
 
         <div class="cert-form-section">
-          <p class="cert-form-section-title">Bride</p>
-          <div class="cert-grid">
-            <div><label class="field-label" for="n-bride-name">Full Name</label><input id="n-bride-name"
-                name="bride_name" type="text" required maxlength="120" class="field-input"></div>
-            <div><label class="field-label" for="n-bride-age">Age</label><input id="n-bride-age" name="bride_age"
-                type="number" min="18" max="120" class="field-input"></div>
-            <div><label class="field-label" for="n-bride-address">Address</label><input id="n-bride-address"
-                name="bride_address" type="text" class="field-input"></div>
-          </div>
-        </div>
-
-        <div class="cert-form-section">
-          <p class="cert-form-section-title">Vakil (Wali / Representative)</p>
-          <div class="cert-grid">
-            <div><label class="field-label" for="n-vakil-name">Full Name</label><input id="n-vakil-name"
-                name="vakil_name" type="text" class="field-input"></div>
-            <div><label class="field-label" for="n-vakil-age">Age</label><input id="n-vakil-age" name="vakil_age"
-                type="number" min="18" max="120" class="field-input"></div>
-            <div><label class="field-label" for="n-vakil-address">Address</label><input id="n-vakil-address"
-                name="vakil_address" type="text" class="field-input"></div>
-          </div>
-        </div>
-
-        <div class="cert-form-section">
-          <p class="cert-form-section-title">Witnesses</p>
-          <div class="cert-grid" style="margin-bottom:10px;">
-            <div><label class="field-label" for="n-w1-name">Witness 1 — Full Name</label><input id="n-w1-name"
-                name="witness1_name" type="text" class="field-input"></div>
-            <div><label class="field-label" for="n-w1-age">Age</label><input id="n-w1-age" name="witness1_age"
-                type="number" min="18" max="120" class="field-input"></div>
-            <div><label class="field-label" for="n-w1-address">Address</label><input id="n-w1-address"
-                name="witness1_address" type="text" class="field-input"></div>
-          </div>
-          <div class="cert-grid">
-            <div><label class="field-label" for="n-w2-name">Witness 2 — Full Name</label><input id="n-w2-name"
-                name="witness2_name" type="text" class="field-input"></div>
-            <div><label class="field-label" for="n-w2-age">Age</label><input id="n-w2-age" name="witness2_age"
-                type="number" min="18" max="120" class="field-input"></div>
-            <div><label class="field-label" for="n-w2-address">Address</label><input id="n-w2-address"
-                name="witness2_address" type="text" class="field-input"></div>
-          </div>
-        </div>
-
-        <div class="cert-form-section">
-          <p class="cert-form-section-title">Maher (Dower)</p>
+          <p class="cert-form-section-title">Maher (Dower) <span class="title-ur" lang="ur" dir="rtl">مہر</span></p>
           <div class="cert-grid-2">
             <div>
               <label class="field-label" for="n-maher">Amount ({{ currency_symbol|default('₹') }})</label>
@@ -1825,21 +2329,37 @@
               <label class="field-label">Type</label>
               <div class="dower-row">
                 <label class="dower-check"><input type="radio" name="dower_type" value="prompt" checked> Prompt
-                  Dower</label>
+                  Dower (معجل)</label>
                 <label class="dower-check"><input type="radio" name="dower_type" value="deferred"> Deferred
-                  Dower</label>
+                  Dower (مؤجل)</label>
               </div>
             </div>
           </div>
         </div>
 
         <div class="cert-form-section">
-          <p class="cert-form-section-title">Qazi</p>
-          <div class="cert-grid-2">
-            <div><label class="field-label" for="n-qazi-name">Full Name of Qazi</label><input id="n-qazi-name"
-                name="qazi_name" type="text" class="field-input"></div>
-            <div><label class="field-label" for="n-qazi-address">Address</label><input id="n-qazi-address"
-                name="qazi_address" type="text" class="field-input"></div>
+                   <p class="cert-form-section-title">Ceremony <span class="title-ur" lang="ur" dir="rtl">تقریب</span></p>
+          <div class="person-grid-2" style="margin-top:0;">
+            <div>
+              <label class="field-label" for="n-qazi-name">Full Name of Qazi (English)</label>
+              <input id="n-qazi-name" name="qazi_name" type="text" class="field-input">
+            </div>
+            <div>
+              <label class="field-label ur-label" for="n-qazi-name-ur">قاضی کا نام (اردو)</label>
+              <input id="n-qazi-name-ur" name="qazi_name_ur" type="text" class="field-input field-ur" dir="rtl"
+                lang="ur">
+            </div>
+          </div>
+          <div class="person-grid-2">
+            <div>
+              <label class="field-label" for="n-qazi-address">Address (English)</label>
+              <input id="n-qazi-address" name="qazi_address" type="text" class="field-input">
+            </div>
+            <div>
+              <label class="field-label ur-label" for="n-qazi-address-ur">پتہ (اردو)</label>
+              <input id="n-qazi-address-ur" name="qazi_address_ur" type="text" class="field-input field-ur" dir="rtl"
+                lang="ur">
+            </div>
           </div>
           <div style="margin-top:12px;">
             <label class="field-label" for="n-qazi-sign">Qazi Signature (typed)</label>
@@ -1926,6 +2446,8 @@
 
       <div id="cert-preview-body"><!-- populated by JS --></div>
 
+      <p class="field-error" id="cert-preview-error" role="alert" style="margin-top:12px;"></p>
+
       <div class="modal-foot">
         <button type="button" class="btn-glass btn-glass--ghost" id="cert-back-btn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1941,11 +2463,13 @@
             </svg>
             Print
           </button>
-          <button type="button" class="btn-glass btn-glass--gold" id="cert-confirm-save-btn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M20 6 9 17l-5-5" />
+          <button type="button" class="btn-glass btn-glass--submit" id="cert-confirm-save-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round">
+              <path d="m22 2-7 20-4-9-9-4 20-7Z" />
+              <path d="M22 2 11 13" />
             </svg>
-            Confirm &amp; Save
+            Submit
           </button>
         </div>
       </div>
@@ -1957,531 +2481,915 @@
       'use strict';
 
       // ---------- template-injected config ----------
-      var MOSQUE_NAME = {{ mosque_name | default('') | tojson }};
-      var MOSQUE_ADDRESS = {{ mosque_address | default('') | tojson }};
-      var CURRENCY = {{ currency_symbol | default('₹') | tojson }};
+      var MOSQUE_NAME = {{ mosque_name | default ('Jama Masjid Vakola (Trust)') | tojson
+    }};
+    var MOSQUE_ADDRESS = {{ mosque_address | default ('Santacruz (E), Mumbai - 400055') | tojson }};
+    var MOSQUE_NAME_UR = {{ mosque_name_ur | default ('جامع مسجد وکولہ (ٹرسٹ) سانتاکروز (ایسٹ) ممبئی ۔ ۴۰۰۰۵۵') | tojson }};
+    var MOSQUE_REG_NO = {{ mosque_reg_no | default ('B-191-1952-Bom.') | tojson }};
+    var CURRENCY = {{ currency_symbol | default ('₹') | tojson }};
+    var URDU_ENDPOINT = {{ urdu_endpoint | default ('/admin/registrations/urdu') | tojson }};
 
-      var csrfMeta = document.querySelector('meta[name="csrf-token"]');
-      var csrfToken = csrfMeta ? csrfMeta.content : '';
+    var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    var csrfToken = csrfMeta ? csrfMeta.content : '';
 
-      var rows = Array.prototype.slice.call(document.querySelectorAll('.reg-row'));
-      var tbody = document.getElementById('reg-table-body');
-      var state = { type: 'all', status: 'all', search: '', from: '', to: '' };
+    var rows = Array.prototype.slice.call(document.querySelectorAll('.reg-row'));
+    var tbody = document.getElementById('reg-table-body');
+    var state = { type: 'all', status: 'all', search: '', from: '', to: '' };
 
-      var NIKAH_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="14" r="5"/><circle cx="15" cy="14" r="5"/></svg>';
-      var MADRASA_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5.5C4 4.67 4.67 4 5.5 4H12v16H5.5A1.5 1.5 0 0 1 4 18.5v-13Z"/><path d="M20 5.5c0-.83-.67-1.5-1.5-1.5H12v16h6.5a1.5 1.5 0 0 0 1.5-1.5v-13Z"/></svg>';
+    var NIKAH_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="14" r="5"/><circle cx="15" cy="14" r="5"/></svg>';
+    var MADRASA_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5.5C4 4.67 4.67 4 5.5 4H12v16H5.5A1.5 1.5 0 0 1 4 18.5v-13Z"/><path d="M20 5.5c0-.83-.67-1.5-1.5-1.5H12v16h6.5a1.5 1.5 0 0 0 1.5-1.5v-13Z"/></svg>';
 
-      // ---------- small helpers ----------
-      function txt(v) {
-        return (v === null || v === undefined) ? '' : String(v);
-      }
+    // ---------- small helpers ----------
+    function txt(v) {
+      return (v === null || v === undefined) ? '' : String(v);
+    }
 
-      function escapeHtml(v) {
-        return txt(v).replace(/[&<>"']/g, function (c) {
-          return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
-        });
-      }
+    function escapeHtml(v) {
+      return txt(v).replace(/[&<>"']/g, function (c) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+      });
+    }
 
-      // escaped value, or an em-dash when blank — never the string "undefined"
-      function orDash(v) {
-        var s = txt(v).trim();
-        return s ? escapeHtml(s) : '—';
-      }
+    // escaped value, or an em-dash when blank — never the string "undefined"
+    function orDash(v) {
+      var s = txt(v).trim();
+      return s ? escapeHtml(s) : '—';
+    }
 
-      function parseStamp(value) {
-        var s = txt(value).trim();
-        if (!s) return null;
-        // tolerate SQL-style "2026-09-16 09:12:00" (Safari returns NaN for that form)
-        s = s.replace(' ', 'T');
-        var d = new Date(s);
-        return isNaN(d.getTime()) ? null : d;
-      }
+    function parseStamp(value) {
+      var s = txt(value).trim();
+      if (!s) return null;
+      // tolerate SQL-style "2026-09-16 09:12:00" (Safari returns NaN for that form)
+      s = s.replace(' ', 'T');
+      var d = new Date(s);
+      return isNaN(d.getTime()) ? null : d;
+    }
 
-      // ---------- stats ----------
-      function refreshStats() {
-        rows = Array.prototype.slice.call(document.querySelectorAll('.reg-row'));
-        var total = rows.length, madrasa = 0, nikah = 0, thisMonth = 0;
-        var now = new Date();
+    function pad2(n) {
+      return (n < 10 ? '0' : '') + n;
+    }
 
-        rows.forEach(function (row) {
-          if (row.dataset.type === 'madrasa') madrasa++;
-          if (row.dataset.type === 'nikah') nikah++;
-          var d = parseStamp(row.dataset.submitted);
-          if (d && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) thisMonth++;
-        });
+    // ---------- Urdu helpers (digits, months, weekdays, time of day) ----------
+    var URDU_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
+    var URDU_MONTHS = ['جنوری', 'فروری', 'مارچ', 'اپریل', 'مئی', 'جون', 'جولائی', 'اگست', 'ستمبر', 'اکتوبر', 'نومبر', 'دسمبر'];
+    var URDU_DAYS = ['اتوار', 'پیر', 'منگل', 'بدھ', 'جمعرات', 'جمعہ', 'ہفتہ'];
 
-        document.getElementById('stat-total').textContent = total;
-        document.getElementById('stat-madrasa').textContent = madrasa;
-        document.getElementById('stat-nikah').textContent = nikah;
-        document.getElementById('stat-month').textContent = thisMonth;
-        document.getElementById('nav-count-all').textContent = total;
-        document.getElementById('nav-count-madrasa').textContent = madrasa;
-        document.getElementById('nav-count-nikah').textContent = nikah;
-        document.getElementById('results-total').textContent = total;
-        document.getElementById('stat-month-label').textContent =
-          now.toLocaleString('en-US', { month: 'long' }) + ' submissions';
-      }
+    function toUrduDigits(v) {
+      return txt(v).replace(/[0-9]/g, function (d) { return URDU_DIGITS.charAt(parseInt(d, 10)); });
+    }
 
-      // ---------- filtering ----------
-      function applyFilters() {
-        var visible = 0;
-        var from = state.from ? new Date(state.from + 'T00:00:00') : null;
-        var to = state.to ? new Date(state.to + 'T23:59:59') : null;
+    // "14:30" -> { en: "2:30 PM", ur: "۲:۳۰ دوپہر" }
+    function timeBoth(t) {
+      var m = /^(\d{1,2}):(\d{2})/.exec(txt(t).trim());
+      if (!m) return { en: '', ur: '' };
+      var h = parseInt(m[1], 10);
+      var h12 = (h % 12 === 0) ? 12 : (h % 12);
+      var part = h < 12 ? 'صبح' : (h < 17 ? 'دوپہر' : 'شام');
+      return {
+        en: h12 + ':' + m[2] + ' ' + (h < 12 ? 'AM' : 'PM'),
+        ur: toUrduDigits(h12 + ':' + m[2]) + ' ' + part
+      };
+    }
 
-        rows.forEach(function (row) {
-          var matchesType = state.type === 'all' || row.dataset.type === state.type;
-          var matchesStatus = state.status === 'all' || row.dataset.status === state.status;
-          var matchesSearch = !state.search || txt(row.dataset.search).indexOf(state.search) !== -1;
+    // ---------- stats ----------
+    function refreshStats() {
+      rows = Array.prototype.slice.call(document.querySelectorAll('.reg-row'));
+      var total = rows.length, madrasa = 0, nikah = 0, thisMonth = 0;
+      var now = new Date();
 
-          var submitted = parseStamp(row.dataset.submitted);
-          var matchesFrom = !from || (submitted && submitted >= from);
-          var matchesTo = !to || (submitted && submitted <= to);
-
-          var show = matchesType && matchesStatus && matchesSearch && matchesFrom && matchesTo;
-          row.style.display = show ? '' : 'none';
-          if (show) visible++;
-        });
-
-        document.getElementById('results-count').textContent = visible;
-        document.getElementById('empty-state').classList.toggle('is-visible', visible === 0);
-      }
-
-      function setTypeFilter(value) {
-        state.type = value;
-        document.querySelectorAll('#type-chips .chip').forEach(function (c) {
-          c.classList.toggle('is-active', c.dataset.type === value);
-        });
-        document.querySelectorAll('.side-nav button').forEach(function (b) {
-          b.classList.toggle('is-active', b.dataset.navFilter === value);
-        });
-        applyFilters();
-      }
-
-      document.getElementById('type-chips').addEventListener('click', function (e) {
-        var btn = e.target.closest('.chip');
-        if (btn) setTypeFilter(btn.dataset.type);
+      rows.forEach(function (row) {
+        if (row.dataset.type === 'madrasa') madrasa++;
+        if (row.dataset.type === 'nikah') nikah++;
+        var d = parseStamp(row.dataset.submitted);
+        if (d && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) thisMonth++;
       });
 
-      document.querySelectorAll('.side-nav button').forEach(function (btn) {
-        btn.addEventListener('click', function () { setTypeFilter(btn.dataset.navFilter); });
+      document.getElementById('stat-total').textContent = total;
+      document.getElementById('stat-madrasa').textContent = madrasa;
+      document.getElementById('stat-nikah').textContent = nikah;
+      document.getElementById('stat-month').textContent = thisMonth;
+      document.getElementById('nav-count-all').textContent = total;
+      document.getElementById('nav-count-madrasa').textContent = madrasa;
+      document.getElementById('nav-count-nikah').textContent = nikah;
+      document.getElementById('results-total').textContent = total;
+      document.getElementById('stat-month-label').textContent =
+        now.toLocaleString('en-US', { month: 'long' }) + ' submissions';
+    }
+
+    // ---------- filtering ----------
+    function applyFilters() {
+      var visible = 0;
+      var from = state.from ? new Date(state.from + 'T00:00:00') : null;
+      var to = state.to ? new Date(state.to + 'T23:59:59') : null;
+
+      rows.forEach(function (row) {
+        var matchesType = state.type === 'all' || row.dataset.type === state.type;
+        var matchesStatus = state.status === 'all' || row.dataset.status === state.status;
+        var matchesSearch = !state.search || txt(row.dataset.search).indexOf(state.search) !== -1;
+
+        var submitted = parseStamp(row.dataset.submitted);
+        var matchesFrom = !from || (submitted && submitted >= from);
+        var matchesTo = !to || (submitted && submitted <= to);
+
+        var show = matchesType && matchesStatus && matchesSearch && matchesFrom && matchesTo;
+        row.style.display = show ? '' : 'none';
+        if (show) visible++;
       });
 
-      document.getElementById('status-filter').addEventListener('change', function (e) {
-        state.status = e.target.value;
-        applyFilters();
-      });
-      document.getElementById('date-from').addEventListener('change', function (e) {
-        state.from = e.target.value;
-        applyFilters();
-      });
-      document.getElementById('date-to').addEventListener('change', function (e) {
-        state.to = e.target.value;
-        applyFilters();
-      });
-      document.getElementById('search-input').addEventListener('input', function (e) {
-        state.search = e.target.value.trim().toLowerCase();
-        applyFilters();
-      });
+      document.getElementById('results-count').textContent = visible;
+      document.getElementById('empty-state').classList.toggle('is-visible', visible === 0);
+    }
 
-      // ---------- detail modal ----------
-      var modal = document.getElementById('detail-modal');
-      var newRegModal = document.getElementById('new-reg-modal');
-      var certModal = document.getElementById('cert-preview-modal');
-      var activeRow = null;
+    function setTypeFilter(value) {
+      state.type = value;
+      document.querySelectorAll('#type-chips .chip').forEach(function (c) {
+        c.classList.toggle('is-active', c.dataset.type === value);
+      });
+      document.querySelectorAll('.side-nav button').forEach(function (b) {
+        b.classList.toggle('is-active', b.dataset.navFilter === value);
+      });
+      applyFilters();
+    }
 
-      var FIELD_LABELS = {
-        bride: "Bride's name", groom: "Groom's name", nikahdate: "Preferred nikah date",
-        child: "Child's name", age: "Child's age", parent: "Parent / guardian"
+    document.getElementById('type-chips').addEventListener('click', function (e) {
+      var btn = e.target.closest('.chip');
+      if (btn) setTypeFilter(btn.dataset.type);
+    });
+
+    document.querySelectorAll('.side-nav button').forEach(function (btn) {
+      btn.addEventListener('click', function () { setTypeFilter(btn.dataset.navFilter); });
+    });
+
+    document.getElementById('status-filter').addEventListener('change', function (e) {
+      state.status = e.target.value;
+      applyFilters();
+    });
+    document.getElementById('date-from').addEventListener('change', function (e) {
+      state.from = e.target.value;
+      applyFilters();
+    });
+    document.getElementById('date-to').addEventListener('change', function (e) {
+      state.to = e.target.value;
+      applyFilters();
+    });
+    document.getElementById('search-input').addEventListener('input', function (e) {
+      state.search = e.target.value.trim().toLowerCase();
+      applyFilters();
+    });
+
+    // ---------- detail modal ----------
+    var modal = document.getElementById('detail-modal');
+    var newRegModal = document.getElementById('new-reg-modal');
+    var certModal = document.getElementById('cert-preview-modal');
+    var activeRow = null;
+
+    var FIELD_LABELS = {
+      bride: "Bride's name", groom: "Groom's name", nikahdate: "Preferred nikah date",
+      child: "Child's name", age: "Child's age", parent: "Parent / guardian"
+    };
+
+    function attachRowClick(row) {
+      row.addEventListener('click', function () { openModal(row); });
+    }
+    rows.forEach(attachRowClick);
+
+    function addDetailItem(grid, label, value) {
+      var item = document.createElement('div');
+      item.className = 'detail-item';
+      item.innerHTML = '<p class="detail-label"></p><p class="detail-value"></p>';
+      item.querySelector('.detail-label').textContent = label;
+      item.querySelector('.detail-value').textContent = txt(value) || '—';
+      grid.appendChild(item);
+    }
+
+    function openModal(row) {
+      activeRow = row;
+      var isNikah = row.dataset.type === 'nikah';
+
+      var iconEl = document.getElementById('modal-type-icon');
+      iconEl.innerHTML = isNikah ? NIKAH_ICON : MADRASA_ICON;
+      iconEl.className = 'type-icon ' + row.dataset.type;
+
+      document.getElementById('modal-arabic-label').textContent = isNikah ? 'نكاح نامہ' : 'مدرسہ داخلہ';
+      document.getElementById('modal-title-text').textContent = txt(row.dataset.primary);
+      document.getElementById('modal-meta-text').textContent =
+        txt(row.dataset.id) + ' · Submitted ' +
+        row.querySelector('.timestamp-cell').textContent.replace(/\s+/g, ' ').trim();
+
+      var grid = document.getElementById('modal-detail-grid');
+      grid.innerHTML = '';
+      Object.keys(row.dataset).forEach(function (key) {
+        if (key.indexOf('field') !== 0) return;
+        var fieldKey = key.slice(5).toLowerCase();
+        addDetailItem(grid, FIELD_LABELS[fieldKey] || fieldKey, row.dataset[key]);
+      });
+      addDetailItem(grid, 'Contact number', row.dataset.contact);
+
+      document.getElementById('modal-status-select').value = row.dataset.status;
+      document.getElementById('modal-call-btn').onclick = function () {
+        window.location.href = 'tel:' + txt(row.dataset.contact).replace(/\s+/g, '');
       };
 
-      function attachRowClick(row) {
-        row.addEventListener('click', function () { openModal(row); });
-      }
-      rows.forEach(attachRowClick);
+      modal.classList.add('is-open');
+    }
 
-      function addDetailItem(grid, label, value) {
-        var item = document.createElement('div');
-        item.className = 'detail-item';
-        item.innerHTML = '<p class="detail-label"></p><p class="detail-value"></p>';
-        item.querySelector('.detail-label').textContent = label;
-        item.querySelector('.detail-value').textContent = txt(value) || '—';
-        grid.appendChild(item);
-      }
+    function closeModal() {
+      modal.classList.remove('is-open');
+      activeRow = null;
+    }
 
-      function openModal(row) {
-        activeRow = row;
-        var isNikah = row.dataset.type === 'nikah';
+        document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+    modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
 
-        var iconEl = document.getElementById('modal-type-icon');
-        iconEl.innerHTML = isNikah ? NIKAH_ICON : MADRASA_ICON;
-        iconEl.className = 'type-icon ' + row.dataset.type;
+    var DELETE_BTN_HTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/><path d="M10 11v6M14 11v6"/></svg> Delete';
 
-        document.getElementById('modal-arabic-label').textContent = isNikah ? 'نكاح نامہ' : 'مدرسہ داخلہ';
-        document.getElementById('modal-title-text').textContent = txt(row.dataset.primary);
-        document.getElementById('modal-meta-text').textContent =
-          txt(row.dataset.id) + ' · Submitted ' +
-          row.querySelector('.timestamp-cell').textContent.replace(/\s+/g, ' ').trim();
+    document.getElementById('modal-delete-btn').addEventListener('click', function () {
+      if (!activeRow) return;
+      var row = activeRow;
+      var name = txt(row.dataset.primary) || 'this registration';
+      if (!window.confirm('Delete "' + name + '"? This permanently removes the record from the database — it cannot be undone.')) return;
 
-        var grid = document.getElementById('modal-detail-grid');
-        grid.innerHTML = '';
-        Object.keys(row.dataset).forEach(function (key) {
-          if (key.indexOf('field') !== 0) return;
-          var fieldKey = key.slice(5).toLowerCase();
-          addDetailItem(grid, FIELD_LABELS[fieldKey] || fieldKey, row.dataset[key]);
-        });
-        addDetailItem(grid, 'Contact number', row.dataset.contact);
+      var btn = this;
+      btn.disabled = true;
+      btn.textContent = 'Deleting…';
 
-        document.getElementById('modal-status-select').value = row.dataset.status;
-        document.getElementById('modal-call-btn').onclick = function () {
-          window.location.href = 'tel:' + txt(row.dataset.contact).replace(/\s+/g, '');
-        };
-
-        modal.classList.add('is-open');
-      }
-
-      function closeModal() {
-        modal.classList.remove('is-open');
-        activeRow = null;
-      }
-
-      document.getElementById('modal-close-btn').addEventListener('click', closeModal);
-      modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
-
-      document.addEventListener('keydown', function (e) {
-        if (e.key !== 'Escape') return;
-        // close only the topmost open layer
-        if (certModal.classList.contains('is-open')) { closeCertPreview(); return; }
-        if (newRegModal.classList.contains('is-open')) { closeNewReg(); return; }
-        if (modal.classList.contains('is-open')) closeModal();
-      });
-
-      var SAVE_STATUS_HTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg> Save status';
-
-      document.getElementById('modal-save-btn').addEventListener('click', function () {
-        if (!activeRow) return;
-        var row = activeRow;
-        var newStatus = document.getElementById('modal-status-select').value;
-        var saveBtn = document.getElementById('modal-save-btn');
-
-        saveBtn.disabled = true;
-        saveBtn.textContent = 'Saving…';
-
-        fetch('/admin/registrations/' + encodeURIComponent(row.dataset.dbid) + '/status', {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
-          body: JSON.stringify({ status: newStatus })
+      fetch('/admin/registrations/' + encodeURIComponent(row.dataset.dbid) + '/delete', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken }
+      })
+        .then(function (res) {
+          if (!res.ok) throw new Error('Request failed with ' + res.status);
+          return res.json();
         })
-          .then(function (res) {
-            if (!res.ok) throw new Error('Request failed with ' + res.status);
-            return res.json();
-          })
-          .then(function () {
-            row.dataset.status = newStatus;
-            var badge = row.querySelector('.status-badge');
-            badge.className = 'badge badge-' + newStatus + ' status-badge';
-            badge.textContent = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
-            closeModal();
-            applyFilters();
-            refreshStats();
-          })
-          .catch(function (err) {
-            window.alert('Could not save the status change — please try again.');
-            console.error(err);
-          })
-          .finally(function () {
-            saveBtn.disabled = false;
-            saveBtn.innerHTML = SAVE_STATUS_HTML;
-          });
-      });
+        .then(function () {
+          row.remove();
+          rows = Array.prototype.slice.call(document.querySelectorAll('.reg-row'));
+          closeModal();
+          applyFilters();
+          refreshStats();
+        })
+        .catch(function (err) {
+          window.alert('Could not delete this registration — please try again.');
+          console.error(err);
+        })
+        .finally(function () {
+          btn.disabled = false;
+          btn.innerHTML = DELETE_BTN_HTML;
+        });
+    });
 
-      // ---------- scoped print (whichever modal is currently open) ----------
-      function printOpenModal() {
-        document.body.classList.add('is-printing');
-        window.print();
-        // afterprint doesn't fire everywhere; clear the class either way
-        window.setTimeout(function () { document.body.classList.remove('is-printing'); }, 1000);
-      }
-      window.addEventListener('afterprint', function () {
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      // close only the topmost open layer
+      if (certModal.classList.contains('is-open')) { closeCertPreview(); return; }
+      if (newRegModal.classList.contains('is-open')) { closeNewReg(); return; }
+      if (modal.classList.contains('is-open')) closeModal();
+    });
+
+    var SAVE_STATUS_HTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg> Save status';
+
+    document.getElementById('modal-save-btn').addEventListener('click', function () {
+      if (!activeRow) return;
+      var row = activeRow;
+      var newStatus = document.getElementById('modal-status-select').value;
+      var saveBtn = document.getElementById('modal-save-btn');
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+
+      fetch('/admin/registrations/' + encodeURIComponent(row.dataset.dbid) + '/status', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+        body: JSON.stringify({ status: newStatus })
+      })
+        .then(function (res) {
+          if (!res.ok) throw new Error('Request failed with ' + res.status);
+          return res.json();
+        })
+        .then(function () {
+          row.dataset.status = newStatus;
+          var badge = row.querySelector('.status-badge');
+          badge.className = 'badge badge-' + newStatus + ' status-badge';
+          badge.textContent = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
+          closeModal();
+          applyFilters();
+          refreshStats();
+        })
+        .catch(function (err) {
+          window.alert('Could not save the status change — please try again.');
+          console.error(err);
+        })
+        .finally(function () {
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = SAVE_STATUS_HTML;
+        });
+    });
+
+    // ---------- scoped print (whichever modal is currently open) ----------
+     var printCleanup = null;
+      var printTarget = null; // 'cert' while a cert print is in flight, else null
+
+      function endPrint() {
         document.body.classList.remove('is-printing');
-      });
-      document.getElementById('modal-print-btn').addEventListener('click', printOpenModal);
-      document.getElementById('cert-print-btn').addEventListener('click', printOpenModal);
-
-      // ---------- new registration modal ----------
-      var formNikah = document.getElementById('form-nikah-direct');
-      var formMadrasa = document.getElementById('form-madrasa-direct');
-      var activeTab = 'nikah';
-
-      function activeForm() {
-        return activeTab === 'nikah' ? formNikah : formMadrasa;
+        modal.classList.remove('is-print-active');
+        certModal.classList.remove('is-print-active');
+        if (printCleanup) { printCleanup(); printCleanup = null; }
+        printTarget = null;
       }
+    // Scale the Nikah Nama so it lands on ONE A4 page (194 x 281 mm printable, 8 mm margins).
+    // Lays it out at a width, measures the height, and searches for the width/scale pair that
+    // fills the page — so long addresses shrink the whole sheet instead of spilling to page 2.
+    function fitCertToPage() {
+      var wrap = document.querySelector('#cert-preview-body .nk-wrap');
+      var cert = wrap ? wrap.querySelector('.nk-cert') : null;
+      if (!cert) return null;
 
-      function formIsDirty() {
-        var form = activeForm();
-        return Array.prototype.some.call(form.elements, function (el) {
-          if (el.type === 'radio' || el.type === 'checkbox') return el.checked !== el.defaultChecked;
-          if (el.tagName === 'SELECT') return el.selectedIndex !== 0;
-          return txt(el.value).trim() !== '';
-        });
+      var mm = 96 / 25.4;
+      var pageW = 194 * mm;
+      var pageH = 281 * mm * 0.98; // small safety margin for print-vs-screen font metrics
+
+      cert.style.minWidth = '0';
+      cert.style.transform = 'none';
+      cert.style.transformOrigin = '0 0';
+
+      var width = pageW, scale = 1, height = 0;
+      for (var i = 0; i < 5; i++) {
+        cert.style.width = width + 'px';
+        height = cert.offsetHeight;
+        scale = Math.min(pageW / width, pageH / height);
+        var next = Math.max(pageW, Math.min(pageW / scale, 1000));
+        if (Math.abs(next - width) < 2) break;
+        width = next;
       }
+      cert.style.width = width + 'px';
+      height = cert.offsetHeight;
+      scale = Math.min(pageW / width, pageH / height, 1);
 
-      document.getElementById('open-new-reg').addEventListener('click', function () {
-        newRegModal.classList.add('is-open');
+      cert.style.transform = 'scale(' + scale + ')';
+      wrap.style.width = (width * scale) + 'px';
+      wrap.style.height = (height * scale) + 'px';
+      wrap.style.margin = '0 auto';
+
+      return function () {
+        cert.style.cssText = '';
+        wrap.style.cssText = '';
+      };
+    }
+
+         function printOpenModal(overlay) {
+        endPrint();
+        overlay.classList.add('is-print-active');
+        document.body.classList.add('is-printing');
+        printTarget = (overlay === certModal) ? 'cert' : null;
+        window.print();
+        // afterprint doesn't fire everywhere; clean up either way
+        window.setTimeout(endPrint, 1000);
+      }
+      // Measure and scale AFTER print CSS is actually applied, not before —
+      // measuring pre-print gives the on-screen layout's dimensions, which
+      // don't match the print stylesheet's (padding:0, width:100%, etc.),
+      // so the old scale was computed against the wrong box every time.
+      window.addEventListener('beforeprint', function () {
+        if (printTarget === 'cert') printCleanup = fitCertToPage();
       });
+      window.addEventListener('afterprint', endPrint);
+    window.addEventListener('afterprint', endPrint);
+    document.getElementById('modal-print-btn').addEventListener('click', function () { printOpenModal(modal); });
+    document.getElementById('cert-print-btn').addEventListener('click', function () { printOpenModal(certModal); });
 
-      function closeNewReg() {
-        newRegModal.classList.remove('is-open');
+    // ---------- new registration modal ----------
+    var formNikah = document.getElementById('form-nikah-direct');
+    var formMadrasa = document.getElementById('form-madrasa-direct');
+    var activeTab = 'nikah';
+
+    function activeForm() {
+      return activeTab === 'nikah' ? formNikah : formMadrasa;
+    }
+
+    function formIsDirty() {
+      var form = activeForm();
+      return Array.prototype.some.call(form.elements, function (el) {
+        if (el.type === 'radio' || el.type === 'checkbox') return el.checked !== el.defaultChecked;
+        if (el.tagName === 'SELECT') return el.selectedIndex !== 0;
+        return txt(el.value).trim() !== '';
+      });
+    }
+
+    document.getElementById('open-new-reg').addEventListener('click', function () {
+      newRegModal.classList.add('is-open');
+    });
+
+    function closeNewReg() {
+      newRegModal.classList.remove('is-open');
+      document.getElementById('new-reg-error').textContent = '';
+    }
+
+    function requestCloseNewReg() {
+      if (formIsDirty() && !window.confirm('Discard this registration? Anything you have typed will be lost.')) return;
+      closeNewReg();
+    }
+
+    document.getElementById('new-reg-close').addEventListener('click', requestCloseNewReg);
+    document.getElementById('new-reg-cancel').addEventListener('click', requestCloseNewReg);
+    // NOTE: deliberately no overlay-click-to-close here — it used to discard a
+    // half-filled Nikah Nama on a stray click.
+
+    document.querySelectorAll('.reg-tab').forEach(function (tab) {
+      tab.addEventListener('click', function () {
+        document.querySelectorAll('.reg-tab').forEach(function (t) { t.classList.remove('is-active'); });
+        tab.classList.add('is-active');
+        activeTab = tab.dataset.regTab;
+        formNikah.style.display = activeTab === 'nikah' ? '' : 'none';
+        formMadrasa.style.display = activeTab === 'madrasa' ? '' : 'none';
         document.getElementById('new-reg-error').textContent = '';
-      }
-
-      function requestCloseNewReg() {
-        if (formIsDirty() && !window.confirm('Discard this registration? Anything you have typed will be lost.')) return;
-        closeNewReg();
-      }
-
-      document.getElementById('new-reg-close').addEventListener('click', requestCloseNewReg);
-      document.getElementById('new-reg-cancel').addEventListener('click', requestCloseNewReg);
-      // NOTE: deliberately no overlay-click-to-close here — it used to discard a
-      // half-filled Nikah Nama on a stray click.
-
-      document.querySelectorAll('.reg-tab').forEach(function (tab) {
-        tab.addEventListener('click', function () {
-          document.querySelectorAll('.reg-tab').forEach(function (t) { t.classList.remove('is-active'); });
-          tab.classList.add('is-active');
-          activeTab = tab.dataset.regTab;
-          formNikah.style.display = activeTab === 'nikah' ? '' : 'none';
-          formMadrasa.style.display = activeTab === 'madrasa' ? '' : 'none';
-          document.getElementById('new-reg-error').textContent = '';
-        });
       });
+    });
 
-      function collectFormData(form) {
-        var data = {};
-        new FormData(form).forEach(function (value, key) { data[key] = value; });
-        return data;
-      }
+    function collectFormData(form) {
+      var data = {};
+      new FormData(form).forEach(function (value, key) { data[key] = value; });
+      return data;
+    }
 
-      function validateActiveForm() {
-        var form = activeForm();
-        if (!form.reportValidity()) return null;
-        return collectFormData(form);
-      }
+    function validateActiveForm() {
+      var form = activeForm();
+      if (!form.reportValidity()) return null;
+      return collectFormData(form);
+    }
 
-      function fmtDate(iso) {
-        var d = parseStamp(txt(iso) ? txt(iso) + 'T00:00:00' : '');
-        return d ? d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
-      }
+    function fmtDate(iso) {
+      var d = parseStamp(txt(iso) ? txt(iso) + 'T00:00:00' : '');
+      return d ? d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+    }
 
-      function fmtDay(iso) {
-        var d = parseStamp(txt(iso) ? txt(iso) + 'T00:00:00' : '');
-        return d ? d.toLocaleDateString('en-US', { weekday: 'long' }) : '';
-      }
+    function fmtDay(iso) {
+      var d = parseStamp(txt(iso) ? txt(iso) + 'T00:00:00' : '');
+      return d ? d.toLocaleDateString('en-US', { weekday: 'long' }) : '';
+    }
 
-      function personCell(role, roleAr, name, age, address) {
-        var meta = [txt(age) ? ('Age ' + txt(age)) : '', txt(address)].filter(Boolean).join(' · ');
-        return '<tr><td class="cert-role"><span class="cert-role-ar">' + roleAr + '</span>' + role + '</td>' +
-          '<td>' +
-          (txt(name).trim()
-            ? '<div class="cert-person-name">' + escapeHtml(name) + '</div>'
-            : '<div class="cert-empty">Not provided</div>') +
-          (meta ? '<div class="cert-person-meta">' + escapeHtml(meta) + '</div>' : '') +
-          '</td></tr>';
-      }
+    // ---------- generic certificate bits (Madrasa preview) ----------
+    function personCell(role, roleAr, name, age, address) {
+      var meta = [txt(age) ? ('Age ' + txt(age)) : '', txt(address)].filter(Boolean).join(' · ');
+      return '<tr><td class="cert-role"><span class="cert-role-ar">' + roleAr + '</span>' + role + '</td>' +
+        '<td>' +
+        (txt(name).trim()
+          ? '<div class="cert-person-name">' + escapeHtml(name) + '</div>'
+          : '<div class="cert-empty">Not provided</div>') +
+        (meta ? '<div class="cert-person-meta">' + escapeHtml(meta) + '</div>' : '') +
+        '</td></tr>';
+    }
 
-      function certHeader(titleAr, titleEn) {
-        return '<div class="cert-header">' +
-          '<p class="cert-bismillah">بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ</p>' +
-          '<p class="cert-title-ar">' + titleAr + '</p>' +
-          '<p class="cert-title-en">' + titleEn + '</p>' +
-          '<p class="cert-mosque-line"><span class="cert-mosque-name">' + escapeHtml(MOSQUE_NAME) + '</span>' +
-          (MOSQUE_ADDRESS ? ' · ' + escapeHtml(MOSQUE_ADDRESS) : '') + '</p>' +
-          '</div>';
-      }
+    function certHeader(titleAr, titleEn) {
+      return '<div class="cert-header">' +
+        '<p class="cert-bismillah">بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ</p>' +
+        '<p class="cert-title-ar">' + titleAr + '</p>' +
+        '<p class="cert-title-en">' + titleEn + '</p>' +
+        '<p class="cert-mosque-line"><span class="cert-mosque-name">' + escapeHtml(MOSQUE_NAME) + '</span>' +
+        (MOSQUE_ADDRESS ? ' · ' + escapeHtml(MOSQUE_ADDRESS) : '') + '</p>' +
+        '</div>';
+    }
 
-      function renderNikahCert(d) {
-        var maherType = d.dower_type === 'deferred' ? 'Deferred Dower' : 'Prompt Dower';
-        return '' +
-          '<div class="cert-sheet">' +
-          certHeader('سند نکاح', 'NIKAH NAMA') +
-          '<div class="cert-nos">' +
-          '<div class="cert-no-box"><p class="cert-no-label">Register No.</p><p class="cert-no-value">' + orDash(d.register_no) + '</p></div>' +
-          '<div class="cert-no-box"><p class="cert-no-label">Serial No.</p><p class="cert-no-value">' + orDash(d.serial_no) + '</p></div>' +
-          '</div>' +
-          '<div class="cert-datetime">' +
-          '<span>Date: <strong>' + orDash(fmtDate(d.nikah_date)) + '</strong></span>' +
-          '<span>Day: <strong>' + orDash(fmtDay(d.nikah_date)) + '</strong></span>' +
-          '<span>Time: <strong>' + orDash(d.nikah_time) + '</strong></span>' +
-          '<span>Venue: <strong>' + orDash(d.nikah_location) + '</strong></span>' +
-          '</div>' +
-          '<table class="cert-table">' +
-          personCell('Groom', 'زوج', d.groom_name, d.groom_age, d.groom_address) +
-          personCell('Bride', 'زوجہ', d.bride_name, d.bride_age, d.bride_address) +
-          personCell('Vakil', 'وکیل', d.vakil_name, d.vakil_age, d.vakil_address) +
-          personCell('Witness 1', 'گواہ اول', d.witness1_name, d.witness1_age, d.witness1_address) +
-          personCell('Witness 2', 'گواہ دوم', d.witness2_name, d.witness2_age, d.witness2_address) +
-          '</table>' +
-          '<div class="cert-maher">' +
-          '<div><p class="cert-no-label">Amount of Maher</p><p class="cert-maher-amount">' +
-          escapeHtml(CURRENCY) + escapeHtml(txt(d.maher_amount) || '0') + '</p></div>' +
-          '<div class="cert-maher-type">' + maherType + '</div>' +
-          '</div>' +
-          '<div class="cert-qazi">' +
-          '<div>Full Name of Qazi: <strong>' + orDash(d.qazi_name) + '</strong></div>' +
-          '<div>Address: <strong>' + orDash(d.qazi_address) + '</strong></div>' +
-          '</div>' +
-          '<div style="margin-top:8px;">Signature: <span class="cert-signature-line">' +
-          (txt(d.qazi_signature).trim() ? escapeHtml(d.qazi_signature) : '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;') +
-          '</span></div>' +
-          '<p class="cert-footer-note">This is a system-generated preview of the Nikah Nama record and is not a substitute for the signed physical register.</p>' +
-          '</div>';
-      }
+    function renderMadrasaCert(d) {
+      return '' +
+        '<div class="cert-sheet">' +
+        certHeader('داخلہ مدرسہ', 'MADRASA ADMISSION') +
+        '<table class="cert-table">' +
+        personCell('Child', 'طالب علم', d.child_name, d.child_age, '') +
+        personCell('Parent / Guardian', 'سرپرست', d.parent_name, '', d.contact) +
+        '</table>' +
+        '<p class="cert-footer-note">This is a system-generated preview of the admission record.</p>' +
+        '</div>';
+    }
 
-      function renderMadrasaCert(d) {
-        return '' +
-          '<div class="cert-sheet">' +
-          certHeader('داخلہ مدرسہ', 'MADRASA ADMISSION') +
-          '<table class="cert-table">' +
-          personCell('Child', 'طالب علم', d.child_name, d.child_age, '') +
-          personCell('Parent / Guardian', 'سرپرست', d.parent_name, '', d.contact) +
-          '</table>' +
-          '<p class="cert-footer-note">This is a system-generated preview of the admission record.</p>' +
-          '</div>';
-      }
+    // ---------- NIKAH NAMA — bilingual certificate matching the paper design ----------
 
-      document.getElementById('new-reg-preview').addEventListener('click', function () {
-        var data = validateActiveForm();
-        if (!data) return;
-        document.getElementById('cert-preview-body').innerHTML =
-          activeTab === 'nikah' ? renderNikahCert(data) : renderMadrasaCert(data);
-        certModal.dataset.forType = activeTab;
-        certModal.classList.add('is-open');
+    // English line on the left, Urdu line on the right; either may be blank
+    function nkBoth(en, ur) {
+      var e = txt(en).trim(), u = txt(ur).trim();
+      return (e ? '<div class="nk-en">' + escapeHtml(e) + '</div>' : '<div class="nk-en nk-blank">&nbsp;</div>') +
+        (u ? '<div class="nk-ur-val" dir="rtl" lang="ur">' + escapeHtml(u) + '</div>' : '');
+    }
+
+    // labelled value box (register no., date, day, time)
+    function nkField(labelUr, labelEn, en, ur) {
+      return '<div class="nk-field">' +
+        '<div class="nk-flabel"><span class="nk-flabel-ur">' + labelUr + '</span><span class="nk-flabel-en">' + labelEn + '</span></div>' +
+        '<div class="nk-box">' + nkBoth(en, ur) + '</div>' +
+        '</div>';
+    }
+
+    // label cell: Urdu on top, English below (labels are trusted constants)
+    function nkLabel(ur, en) {
+      return '<div class="nk-label"><span class="nk-l-ur">' + ur + '</span><span class="nk-l-en">' + en + '</span></div>';
+    }
+
+    // one person row: label | English + Urdu data | blank signature/thumb box
+    function nkPersonRow(labelUr, labelEn, name, nameUr, age, addr, addrUr) {
+      var a = txt(age).trim();
+      var enMeta = [a ? ('Age ' + a) : '', txt(addr).trim()].filter(Boolean).join(' · ');
+      var hasUr = txt(nameUr).trim() || txt(addrUr).trim();
+      var urMeta = [a ? ('عمر ' + toUrduDigits(a) + ' سال') : '', txt(addrUr).trim()].filter(Boolean).join(' · ');
+
+      return '<div class="nk-row nk-grid">' +
+        nkLabel(labelUr, labelEn) +
+        '<div class="nk-data">' +
+        '<div class="nk-en"><strong>' + orDash(name) + '</strong>' +
+        (enMeta ? '<span>' + escapeHtml(enMeta) + '</span>' : '') + '</div>' +
+        (hasUr
+          ? '<div class="nk-ur-val" dir="rtl" lang="ur"><strong>' + orDash(nameUr) + '</strong>' +
+          (urMeta ? '<span>' + escapeHtml(urMeta) + '</span>' : '') + '</div>'
+          : '') +
+        '</div>' +
+        '<div class="nk-sig"><div class="nk-sig-box"></div></div>' +
+        '</div>';
+    }
+
+    // qazi line: label on the right, English left / Urdu right on one ruled line
+    function nkQaziLine(labelUr, labelEn, valueHtml) {
+      return '<div class="nk-qline">' +
+        '<div class="nk-qlabel"><span class="nk-flabel-ur">' + labelUr + '</span><span class="nk-flabel-en">' + labelEn + '</span></div>' +
+        '<div class="nk-qval">' + valueHtml + '</div>' +
+        '</div>';
+    }
+
+    function nkHeader() {
+      return '<div class="nk-head">' +
+        '<div class="nk-arch"></div>' +
+        '<p class="nk-bismillah">بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ</p>' +
+        '<p class="nk-hadith nk-hadith-r">اَلنِّكَاحُ مِنْ سُنَّتِي</p>' +
+        '<p class="nk-hadith nk-hadith-l">فَمَنْ رَغِبَ عَنْ سُنَّتِي فَلَيْسَ مِنِّي</p>' +
+        '<p class="nk-title-ur">سند نکاح</p>' +
+        '<p class="nk-title-en">NIKAH NAMA</p>' +
+        '</div>';
+    }
+
+    function renderNikahCert(d) {
+      var dt = txt(d.nikah_date) ? parseStamp(txt(d.nikah_date) + 'T00:00:00') : null;
+      var numDate = dt ? pad2(dt.getDate()) + '/' + pad2(dt.getMonth() + 1) + '/' + dt.getFullYear() : '';
+      var urDate = dt
+        ? toUrduDigits(dt.getDate()) + ' ' + URDU_MONTHS[dt.getMonth()] + ' ' + toUrduDigits(dt.getFullYear())
+        : '';
+      var enDay = dt ? fmtDay(d.nikah_date) : '';
+      var urDay = dt ? URDU_DAYS[dt.getDay()] : '';
+      var tm = timeBoth(d.nikah_time);
+
+      var amount = txt(d.maher_amount).trim() || '0';
+      var promptOn = d.dower_type !== 'deferred';
+      var sig = txt(d.qazi_signature).trim();
+
+      var mosqueEn = [MOSQUE_NAME, MOSQUE_ADDRESS].filter(Boolean).join(' ');
+
+      return '' +
+        '<div class="nk-wrap"><div class="nk-cert"><div class="nk-inner">' +
+        nkHeader() +
+        '<div class="nk-table">' +
+
+        // mosque + register number
+        '<div class="nk-row nk-addr">' +
+        '<div class="nk-addr-main">' +
+        (txt(MOSQUE_NAME_UR).trim() ? '<div class="nk-ur-val" dir="rtl" lang="ur">' + escapeHtml(MOSQUE_NAME_UR) + '</div>' : '') +
+        '<div class="nk-en-line">' + escapeHtml(mosqueEn) + '</div>' +
+        '</div>' +
+        (txt(MOSQUE_REG_NO).trim()
+          ? '<div class="nk-addr-reg"><span class="nk-ur">رجسٹر نمبر</span><strong>' + escapeHtml(MOSQUE_REG_NO) + '</strong></div>'
+          : '') +
+        '</div>' +
+
+               // date / day / time
+        // date / day / time
+        '<div class="nk-row nk-dt">' +
+        nkField('تاریخ', 'Date', numDate, urDate) +
+        nkField('بروز', 'Day', enDay, urDay) +
+        nkField('وقت', 'Time', tm.en, tm.ur) +
+        '</div>' +
+
+        // location + signature column heading
+        '<div class="nk-row nk-grid">' +
+        nkLabel('مقام نکاح', 'Nikah Location') +
+        '<div class="nk-data">' + nkBoth(d.nikah_location, d.nikah_location_ur) + '</div>' +
+        '<div class="nk-sig nk-sig-head"><span class="nk-ur">دستخط یا انگوٹھا</span><span>Signature or thumb</span></div>' +
+        '</div>' +
+
+        nkPersonRow('اسم ناکح مع ولدیت، عمر اور پتہ', 'Full Name of Groom<br>Age &amp; Address',
+          d.groom_name, d.groom_name_ur, d.groom_age, d.groom_address, d.groom_address_ur) +
+        nkPersonRow('اسم منکوحہ مع ولدیت، عمر اور پتہ', 'Full Name of Bride<br>Age &amp; Address',
+          d.bride_name, d.bride_name_ur, d.bride_age, d.bride_address, d.bride_address_ur) +
+        nkPersonRow('وکیل کا نام، ولدیت، عمر اور پتہ', 'Full Name of Vakil<br>Age &amp; Address',
+          d.vakil_name, d.vakil_name_ur, d.vakil_age, d.vakil_address, d.vakil_address_ur) +
+        nkPersonRow('گواہ اول کا نام، ولدیت، عمر اور پتہ', 'Full Name of Witness 1<br>Age &amp; Address',
+          d.witness1_name, d.witness1_name_ur, d.witness1_age, d.witness1_address, d.witness1_address_ur) +
+        nkPersonRow('گواہ دوم کا نام، ولدیت، عمر اور پتہ', 'Full Name of Witness 2<br>Age &amp; Address',
+          d.witness2_name, d.witness2_name_ur, d.witness2_age, d.witness2_address, d.witness2_address_ur) +
+
+        // maher
+        '<div class="nk-row nk-grid">' +
+        nkLabel('مہر کی رقم و اقسام', 'Amount &amp; Type of Maher') +
+        '<div class="nk-data nk-maher-types">' +
+        '<span class="nk-cbi"><span class="nk-cb' + (promptOn ? ' is-on' : '') + '"></span>Prompt Dower <span class="nk-ur">معجل</span></span>' +
+        '<span class="nk-cbi"><span class="nk-cb' + (promptOn ? '' : ' is-on') + '"></span>Deferred Dower <span class="nk-ur">مؤجل</span></span>' +
+        '</div>' +
+        '<div class="nk-sig nk-amount"><span class="nk-rupee">' + escapeHtml(CURRENCY) + '</span>' +
+        '<div class="nk-box"><div class="nk-en">' + escapeHtml(amount) + '</div>' +
+        '<div class="nk-ur-val" dir="rtl" lang="ur">' + escapeHtml(toUrduDigits(amount)) + '</div></div></div>' +
+        '</div>' +
+
+        // qazi + stamp
+        '<div class="nk-row nk-qazi">' +
+        '<div class="nk-qazi-fields">' +
+        nkQaziLine('قاضی کا نام', 'Full Name of Qazi',
+          '<span class="nk-en">' + escapeHtml(txt(d.qazi_name).trim()) + '</span>' +
+          '<span class="nk-ur-val" dir="rtl" lang="ur">' + escapeHtml(txt(d.qazi_name_ur).trim()) + '</span>') +
+        nkQaziLine('پتہ', 'Address',
+          '<span class="nk-en">' + escapeHtml(txt(d.qazi_address).trim()) + '</span>' +
+          '<span class="nk-ur-val" dir="rtl" lang="ur">' + escapeHtml(txt(d.qazi_address_ur).trim()) + '</span>') +
+        nkQaziLine('قاضی کے دستخط', 'Signature',
+          '<span class="nk-signature">' + escapeHtml(sig) + '</span>') +
+        '</div>' +
+        '<div class="nk-stamp"><span><span class="nk-ur">مہر</span> Stamp</span><div class="nk-stamp-box">Stamp</div></div>' +
+        '</div>' +
+
+        '</div>' + // .nk-table
+        '<p class="nk-note">System-generated preview of the Nikah Nama record. It does not replace the signed physical register.</p>' +
+        '</div></div></div>';
+    }
+
+    // ---------- auto Urdu (server-side Gemini transliteration) ----------
+    function setUrduStatus(msg, isError) {
+      var el = document.getElementById('urdu-status');
+      el.textContent = msg || '';
+      el.classList.toggle('is-error', !!isError);
+    }
+
+    // every "<x>_ur" input paired with its English "<x>" input
+    function urduPairs() {
+      var pairs = [];
+      Array.prototype.forEach.call(formNikah.elements, function (el) {
+        if (!el.name || !/_ur$/.test(el.name)) return;
+        var en = formNikah.elements[el.name.slice(0, -3)];
+        if (en) pairs.push({ en: en, ur: el });
       });
+      return pairs;
+    }
 
-      function closeCertPreview() { certModal.classList.remove('is-open'); }
-      document.getElementById('cert-preview-close').addEventListener('click', closeCertPreview);
-      document.getElementById('cert-back-btn').addEventListener('click', closeCertPreview);
-      certModal.addEventListener('click', function (e) { if (e.target === certModal) closeCertPreview(); });
-
-      // ---------- build a table row for a freshly saved record ----------
-      function buildRowMarkup(type, dbId, displayId, row) {
-        var tr = document.createElement('tr');
-        tr.className = 'reg-row is-new-row';
-        tr.dataset.id = txt(displayId);
-        tr.dataset.dbid = txt(dbId);
-        tr.dataset.type = type;
-        tr.dataset.status = txt(row.status) || 'pending';
-        tr.dataset.submitted = txt(row.submitted_at);
-
-        var nameCell, badgeIcon, badgeClass, badgeLabel, contact, primary, secondary;
-
-        if (type === 'nikah') {
-          primary = txt(row.bride) + ' & ' + txt(row.groom);
-          secondary = 'Nikah date: ' + txt(row.nikah_date);
-          contact = txt(row.contact);
-
-          tr.dataset.search = (txt(row.bride) + ' ' + txt(row.groom) + ' ' + contact).toLowerCase();
-          tr.dataset.primary = primary;
-          tr.dataset.secondary = secondary;
-          tr.dataset.contact = contact;
-          tr.dataset.fieldBride = txt(row.bride);
-          tr.dataset.fieldGroom = txt(row.groom);
-          tr.dataset.fieldNikahdate = txt(row.nikah_date);
-
-          nameCell = escapeHtml(primary) + '<span class="sub">' + escapeHtml(secondary) + '</span>';
-          badgeIcon = NIKAH_ICON;
-          badgeClass = 'badge-nikah';
-          badgeLabel = 'Nikah';
-        } else {
-          primary = txt(row.child_name);
-          secondary = 'Age ' + txt(row.child_age) + ' · Guardian: ' + txt(row.parent_name);
-          contact = txt(row.madrasa_contact || row.contact);
-
-          tr.dataset.search = (primary + ' ' + txt(row.parent_name) + ' ' + contact).toLowerCase();
-          tr.dataset.primary = primary;
-          tr.dataset.secondary = secondary;
-          tr.dataset.contact = contact;
-          tr.dataset.fieldChild = primary;
-          tr.dataset.fieldAge = txt(row.child_age);
-          tr.dataset.fieldParent = txt(row.parent_name);
-
-          nameCell = escapeHtml(primary) + '<span class="sub">' + escapeHtml(secondary) + '</span>';
-          badgeIcon = MADRASA_ICON;
-          badgeClass = 'badge-madrasa';
-          badgeLabel = 'Madrasa';
+   function fetchUrdu(texts, attempt) {
+  attempt = attempt || 1;
+  return fetch(URDU_ENDPOINT, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+    body: JSON.stringify({ items: texts })
+  })
+    .then(function (res) {
+      if (res.ok) return res.json();
+      return res.json().catch(function () { return {}; }).then(function (payload) {
+        var retryAfter = payload && payload.retry_after;
+        if ((res.status === 429 || res.status === 503) && retryAfter && attempt < 4) {
+          setUrduStatus('Translation service is busy — retrying in ' + retryAfter + 's…');
+          return new Promise(function (resolve) { setTimeout(resolve, retryAfter * 1000); })
+            .then(function () { return fetchUrdu(texts, attempt + 1); });
         }
-
-        var status = tr.dataset.status;
-
-        tr.innerHTML =
-          '<td class="name-cell">' + nameCell + '</td>' +
-          '<td><span class="badge ' + badgeClass + '">' + badgeIcon + ' ' + badgeLabel + '</span></td>' +
-          '<td><span class="badge badge-' + escapeHtml(status) + ' status-badge">' +
-          escapeHtml(status.charAt(0).toUpperCase() + status.slice(1)) + '</span></td>' +
-          '<td class="timestamp-cell">' + escapeHtml(row.display_date) +
-          '<span class="sub">' + escapeHtml(row.display_time) + '</span></td>' +
-          '<td>' + escapeHtml(contact) + '</td>' +
-          '<td class="view-cell">View <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></td>';
-
-        attachRowClick(tr);
-        return tr;
+        throw new Error(res.status === 429
+          ? 'Translation quota hit — wait a minute, or translate fewer fields at once.'
+          : 'Auto-Urdu unavailable — type the Urdu manually.');
+      });
+    })
+    .then(function (payload) {
+      if (!payload || !Array.isArray(payload.items) || payload.items.length !== texts.length) {
+        throw new Error('Unexpected Urdu response');
       }
+      return payload.items;
+    });
+}
+    // Fills Urdu boxes the user has not typed in themselves. overwriteAuto=true also refreshes
+    // boxes that were previously auto-filled (used when the English text changes).
+    function translatePairs(pairs, overwriteAuto) {
+      var todo = pairs.filter(function (p) {
+        if (p.ur.dataset.manual === '1') return false;
+        if (!txt(p.en.value).trim()) {
+          if (p.ur.dataset.auto === '1') { p.ur.value = ''; p.ur.dataset.auto = ''; }
+          return false;
+        }
+        return overwriteAuto || !txt(p.ur.value).trim();
+      });
+      if (!todo.length) return Promise.resolve(0);
 
-      function saveDirectRegistration() {
-        var data = validateActiveForm();
-        if (!data) return;
+      var sent = todo.map(function (p) { return txt(p.en.value).trim(); });
+      setUrduStatus('Translating to Urdu…');
 
-        var type = activeTab;
-        var endpoint = type === 'nikah'
-          ? '/admin/registrations/nikah/new'
-          : '/admin/registrations/madrasa/new';
-        var saveBtns = [
-          document.getElementById('new-reg-save'),
-          document.getElementById('cert-confirm-save-btn')
-        ];
-
-        saveBtns.forEach(function (b) { if (b) b.disabled = true; });
-        document.getElementById('new-reg-error').textContent = '';
-
-        fetch(endpoint, {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
-          body: JSON.stringify(data)
-        })
-          .then(function (res) {
-            if (!res.ok) throw new Error('Request failed with ' + res.status);
-            return res.json();
-          })
-          .then(function (payload) {
-            var row = payload && payload.row;
-            if (row) {
-              tbody.insertBefore(buildRowMarkup(type, row.db_id, row.id, row), tbody.firstChild);
-            }
-            formNikah.reset();
-            formMadrasa.reset();
-            closeCertPreview();
-            closeNewReg();
-            refreshStats();
-            applyFilters();
-          })
-          .catch(function (err) {
-            document.getElementById('new-reg-error').textContent =
-              'Could not save this registration — please check the details and try again.';
-            console.error(err);
-          })
-          .finally(function () {
-            saveBtns.forEach(function (b) { if (b) b.disabled = false; });
+      return fetchUrdu(sent)
+        .then(function (items) {
+          todo.forEach(function (p, i) {
+            var v = txt(items[i]).trim();
+            // skip if the user typed Urdu or changed the English while we waited
+            if (!v || p.ur.dataset.manual === '1' || txt(p.en.value).trim() !== sent[i]) return;
+            p.ur.value = v;
+            p.ur.dataset.auto = '1';
           });
+          setUrduStatus('Urdu filled automatically — edit any box to correct it.');
+          return todo.length;
+        })
+          .catch(function (err) {
+            console.error(err);
+            setUrduStatus((err && err.message) || 'Auto-Urdu unavailable — type the Urdu manually.', true);
+            return 0;
+          });
+    }
+
+    // typing in an Urdu box locks it against auto-overwrite; clearing it hands control back
+    formNikah.addEventListener('input', function (e) {
+      var el = e.target;
+      if (!el.name || !/_ur$/.test(el.name)) return;
+      el.dataset.manual = txt(el.value).trim() ? '1' : '';
+      el.dataset.auto = '';
+    });
+
+     // leaving an English box queues its Urdu twin for translation — batched
+      // with a short debounce so tabbing through 10 fields in a row sends ONE
+      // request, not 10 (that's what was blowing through the 5/min quota).
+      var pendingTranslatePairs = [];
+      var translateDebounceTimer = null;
+
+      formNikah.addEventListener('change', function (e) {
+        var el = e.target;
+        if (!el.name || /_ur$/.test(el.name)) return;
+        var ur = formNikah.elements[el.name + '_ur'];
+        if (!ur) return;
+
+        pendingTranslatePairs = pendingTranslatePairs.filter(function (p) { return p.en !== el; });
+        pendingTranslatePairs.push({ en: el, ur: ur });
+
+        clearTimeout(translateDebounceTimer);
+        translateDebounceTimer = setTimeout(function () {
+          var batch = pendingTranslatePairs;
+          pendingTranslatePairs = [];
+          if (batch.length) translatePairs(batch, true);
+        }, 1200);
+      });
+
+    formNikah.addEventListener('reset', function () {
+      Array.prototype.forEach.call(formNikah.querySelectorAll('.field-ur'), function (el) {
+        el.dataset.manual = '';
+        el.dataset.auto = '';
+      });
+      setUrduStatus('');
+    });
+
+    document.getElementById('urdu-auto-btn').addEventListener('click', function () {
+      var btn = this;
+      btn.disabled = true;
+      translatePairs(urduPairs(), false).finally(function () { btn.disabled = false; });
+    });
+
+    function showPreview(data) {
+      document.getElementById('cert-preview-body').innerHTML =
+        activeTab === 'nikah' ? renderNikahCert(data) : renderMadrasaCert(data);
+      document.getElementById('cert-preview-error').textContent = '';
+      certModal.dataset.forType = activeTab;
+      certModal.classList.add('is-open');
+    }
+
+    document.getElementById('new-reg-preview').addEventListener('click', function () {
+      var data = validateActiveForm();
+      if (!data) return;
+      if (activeTab !== 'nikah') { showPreview(data); return; }
+
+      // fill any empty Urdu boxes first, then render with the up-to-date values
+      var btn = this;
+      btn.disabled = true;
+      translatePairs(urduPairs(), false)
+        .then(function () { showPreview(collectFormData(formNikah)); })
+        .finally(function () { btn.disabled = false; });
+    });
+
+    function closeCertPreview() { certModal.classList.remove('is-open'); }
+    document.getElementById('cert-preview-close').addEventListener('click', closeCertPreview);
+    document.getElementById('cert-back-btn').addEventListener('click', closeCertPreview);
+    certModal.addEventListener('click', function (e) { if (e.target === certModal) closeCertPreview(); });
+
+    // ---------- build a table row for a freshly saved record ----------
+    function buildRowMarkup(type, dbId, displayId, row) {
+      var tr = document.createElement('tr');
+      tr.className = 'reg-row is-new-row';
+      tr.dataset.id = txt(displayId);
+      tr.dataset.dbid = txt(dbId);
+      tr.dataset.type = type;
+      tr.dataset.status = txt(row.status) || 'pending';
+      tr.dataset.submitted = txt(row.submitted_at);
+
+      var nameCell, badgeIcon, badgeClass, badgeLabel, contact, primary, secondary;
+
+      if (type === 'nikah') {
+        primary = txt(row.bride) + ' & ' + txt(row.groom);
+        secondary = 'Nikah date: ' + txt(row.nikah_date);
+        contact = txt(row.contact);
+
+        tr.dataset.search = (txt(row.bride) + ' ' + txt(row.groom) + ' ' + contact).toLowerCase();
+        tr.dataset.primary = primary;
+        tr.dataset.secondary = secondary;
+        tr.dataset.contact = contact;
+        tr.dataset.fieldBride = txt(row.bride);
+        tr.dataset.fieldGroom = txt(row.groom);
+        tr.dataset.fieldNikahdate = txt(row.nikah_date);
+
+        nameCell = escapeHtml(primary) + '<span class="sub">' + escapeHtml(secondary) + '</span>';
+        badgeIcon = NIKAH_ICON;
+        badgeClass = 'badge-nikah';
+        badgeLabel = 'Nikah';
+      } else {
+        primary = txt(row.child_name);
+        secondary = 'Age ' + txt(row.child_age) + ' · Guardian: ' + txt(row.parent_name);
+        contact = txt(row.madrasa_contact || row.contact);
+
+        tr.dataset.search = (primary + ' ' + txt(row.parent_name) + ' ' + contact).toLowerCase();
+        tr.dataset.primary = primary;
+        tr.dataset.secondary = secondary;
+        tr.dataset.contact = contact;
+        tr.dataset.fieldChild = primary;
+        tr.dataset.fieldAge = txt(row.child_age);
+        tr.dataset.fieldParent = txt(row.parent_name);
+
+        nameCell = escapeHtml(primary) + '<span class="sub">' + escapeHtml(secondary) + '</span>';
+        badgeIcon = MADRASA_ICON;
+        badgeClass = 'badge-madrasa';
+        badgeLabel = 'Madrasa';
       }
 
-      document.getElementById('new-reg-save').addEventListener('click', saveDirectRegistration);
-      document.getElementById('cert-confirm-save-btn').addEventListener('click', saveDirectRegistration);
+      var status = tr.dataset.status;
 
-      // ---------- boot ----------
-      refreshStats();
-      applyFilters();
-    })();
+      tr.innerHTML =
+        '<td class="name-cell">' + nameCell + '</td>' +
+        '<td><span class="badge ' + badgeClass + '">' + badgeIcon + ' ' + badgeLabel + '</span></td>' +
+        '<td><span class="badge badge-' + escapeHtml(status) + ' status-badge">' +
+        escapeHtml(status.charAt(0).toUpperCase() + status.slice(1)) + '</span></td>' +
+        '<td class="timestamp-cell">' + escapeHtml(row.display_date) +
+        '<span class="sub">' + escapeHtml(row.display_time) + '</span></td>' +
+        '<td>' + escapeHtml(contact) + '</td>' +
+        '<td class="view-cell">View <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></td>';
+
+      attachRowClick(tr);
+      return tr;
+    }
+
+    function saveDirectRegistration() {
+      var data = validateActiveForm();
+      if (!data) return;
+
+      var type = activeTab;
+      var endpoint = type === 'nikah'
+        ? '/admin/registrations/nikah/new'
+        : '/admin/registrations/madrasa/new';
+      var saveBtn = document.getElementById('new-reg-save');
+      var submitBtn = document.getElementById('cert-confirm-save-btn');
+      var submitHtml = submitBtn.innerHTML;
+      var errorEls = [document.getElementById('new-reg-error'), document.getElementById('cert-preview-error')];
+
+      [saveBtn, submitBtn].forEach(function (b) { if (b) b.disabled = true; });
+      submitBtn.textContent = 'Submitting…';
+      errorEls.forEach(function (el) { el.textContent = ''; });
+
+      fetch(endpoint, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+        body: JSON.stringify(data)
+      })
+        .then(function (res) {
+          if (!res.ok) throw new Error('Request failed with ' + res.status);
+          return res.json();
+        })
+        .then(function (payload) {
+          var row = payload && payload.row;
+          if (row) {
+            tbody.insertBefore(buildRowMarkup(type, row.db_id, row.id, row), tbody.firstChild);
+          }
+          formNikah.reset();
+          formMadrasa.reset();
+          closeCertPreview();
+          closeNewReg();
+          refreshStats();
+          applyFilters();
+        })
+        .catch(function (err) {
+          errorEls.forEach(function (el) {
+            el.textContent = 'Could not save this registration — please check the details and try again.';
+          });
+          console.error(err);
+        })
+        .finally(function () {
+          [saveBtn, submitBtn].forEach(function (b) { if (b) b.disabled = false; });
+          submitBtn.innerHTML = submitHtml;
+        });
+    }
+
+    document.getElementById('new-reg-save').addEventListener('click', saveDirectRegistration);
+    document.getElementById('cert-confirm-save-btn').addEventListener('click', saveDirectRegistration);
+
+    // ---------- boot ----------
+    refreshStats();
+    applyFilters();
+    }) ();
   </script>
 </body>
 
