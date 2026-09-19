@@ -1,191 +1,519 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>{{ mosque_name|default('Masjid') }} · Admin — Prayer Times</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Outfit:wght@400;500;600;700&family=Scheherazade+New:wght@500;600&display=swap" rel="stylesheet">
-<meta name="csrf-token" content="{{ csrf_token() if csrf_token is defined else '' }}">
-<style>
-  :root{
-    --sidebar-bg:#12160e;
-    --bg-page:#1b2118;
-    --surface:#222922;
-    --surface-alt:#262f24;
-    --border:rgba(255,255,255,0.08);
-    --border-strong:rgba(255,255,255,0.16);
-    --text-strong:#f3f5ef;
-    --text-dim:#a9b6a2;
-    --text-faint:#7c8877;
-    --gold-400:#e0bd7c;
-    --gold-500:#d4a24e;
-    --gold-600:#c9973a;
-    --radius:14px;
-    --shadow-soft:0 8px 24px rgba(0,0,0,0.35);
-  }
-  *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
-  body{
-    font-family:'Outfit',sans-serif;
-    color:var(--text-strong);
-    background:
-      radial-gradient(circle at 12% 0%, rgba(201,151,58,0.10), transparent 45%),
-      radial-gradient(circle at 88% 100%, rgba(110,129,101,0.14), transparent 50%),
-      var(--bg-page);
-    min-height:100vh;
-  }
-  h1,h2,h3{font-family:'Cinzel',serif; letter-spacing:0.01em; margin:0;}
-  a{color:inherit;}
-  svg{display:block;}
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ mosque_name|default('Masjid') }} · Admin — Prayer Times</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Outfit:wght@400;500;600;700&family=Scheherazade+New:wght@500;600&display=swap"
+    rel="stylesheet">
+  <meta name="csrf-token" content="{{ csrf_token() if csrf_token is defined else '' }}">
+  <style>
+    :root {
+      --moss-50: #eaede8;
+      --moss-100: #f5f7f4;
+      --moss-400: #8fa087;
+      --moss-500: #6e8165;
+      --moss-600: #475441;
+      --moss-700: #2e3429;
+      --gold-400: #d4b06a;
+      --gold-500: #c9973a;
+      --gold-600: #9a6e22;
+      --line: #d4dbd1;
+      --ink: #232922;
+      --paper: #f3f1e9;
+      --radius: 14px;
+      --shadow-soft: 0 8px 24px rgba(46, 52, 41, 0.08);
+    }
 
-  .admin-shell{display:grid; grid-template-columns:236px 1fr; min-height:100vh;}
-  @media (max-width:900px){ .admin-shell{grid-template-columns:1fr;} }
+    * {
+      box-sizing: border-box;
+    }
 
-  .sidebar{
-    background:var(--sidebar-bg); color:var(--text-dim); padding:28px 22px;
-    display:flex; flex-direction:column; gap:28px; border-right:1px solid var(--border);
-  }
-  @media (max-width:900px){ .sidebar{padding:18px 20px; flex-direction:row; align-items:center; justify-content:space-between; border-right:none; border-bottom:1px solid var(--border);} }
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+    }
 
-  .brand{display:flex; align-items:center; gap:10px;}
-  .brand-icon{flex-shrink:0; color:var(--gold-400);}
-  .brand-name{font-family:'Cinzel',serif; font-size:1.02rem; font-weight:600; color:#fff; line-height:1.15; margin:0;}
-  .brand-sub{font-size:0.68rem; color:var(--text-faint); letter-spacing:0.06em; margin:0;}
+    body {
+      font-family: 'Outfit', sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% 0%, rgba(201, 151, 58, 0.10), transparent 45%),
+        radial-gradient(circle at 88% 100%, rgba(110, 129, 101, 0.14), transparent 50%),
+        var(--paper);
+      min-height: 100vh;
+    }
 
-  .side-section-label{font-size:0.66rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-faint); margin:0 0 6px 4px;}
-  .side-nav{display:flex; flex-direction:column; gap:2px;}
-  @media (max-width:900px){ .side-nav{display:none;} }
-  .side-navlink{
-    display:flex; align-items:center; gap:10px; font-size:0.88rem; color:var(--text-dim);
-    padding:9px 12px; border-radius:10px; text-decoration:none; transition:background .15s ease, color .15s ease;
-  }
-  .side-navlink svg{flex-shrink:0; opacity:0.85;}
-  .side-navlink:hover{background:rgba(255,255,255,0.05); color:var(--text-strong);}
-  .side-navlink.is-active{background:rgba(212,162,78,0.14); color:var(--gold-400);}
+    h1,
+    h2,
+    h3 {
+      font-family: 'Cinzel', serif;
+      letter-spacing: 0.01em;
+      margin: 0;
+    }
 
-  .sidebar-foot{margin-top:auto; font-size:0.72rem; color:var(--text-faint); line-height:1.5;}
-  @media (max-width:900px){ .sidebar-foot{display:none;} }
+    a {
+      color: inherit;
+    }
 
-  .main{padding:30px 34px 60px; min-width:0;}
-  @media (max-width:640px){ .main{padding:20px 16px 40px;} }
+    svg {
+      display: block;
+    }
 
-  .topbar{display:flex; align-items:flex-end; justify-content:space-between; gap:20px; margin-bottom:10px; flex-wrap:wrap;}
-  .topbar h1{font-size:1.5rem; color:var(--text-strong);}
-  .topbar .eyebrow-ar{font-family:'Scheherazade New',serif; color:var(--gold-400); font-size:1.15rem; margin:0 0 2px;}
-  .session-bar{display:flex; align-items:center; gap:10px; font-size:0.78rem; color:var(--text-dim);}
-  .session-bar a{color:var(--gold-400); text-decoration:underline;}
+    /* ---------- layout shell ---------- */
+    .admin-shell {
+      display: grid;
+      grid-template-columns: 236px 1fr;
+      min-height: 100vh;
+    }
 
-  .intro{
-    font-size:0.86rem; color:var(--text-dim); max-width:760px; line-height:1.6;
-    margin:0 0 24px; padding:14px 16px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
-  }
-  .intro strong{color:var(--text-strong);}
+    @media (max-width:900px) {
+      .admin-shell {
+        grid-template-columns: 1fr;
+      }
+    }
 
-  .flash-stack{display:flex; flex-direction:column; gap:8px; margin-bottom:18px;}
-  .flash{font-size:0.82rem; padding:10px 14px; border-radius:10px; border:1px solid var(--border);}
-  .flash-error{background:rgba(184,76,58,0.16); color:#ffb3a0; border-color:rgba(184,76,58,0.35);}
-  .flash-success{background:rgba(110,129,101,0.18); color:#cfe3c9; border-color:rgba(110,129,101,0.3);}
+    /* ---------- shared sidebar (rendered by admin_components/_admin_sidebar.html) ---------- */
+    .sidebar {
+      background: var(--moss-700);
+      color: var(--moss-50);
+      padding: 28px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 34px;
+    }
 
-  .prayer-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:16px; margin-bottom:24px;}
+    @media (max-width:900px) {
+      .sidebar {
+        padding: 18px 20px;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+    }
 
-  .prayer-card{
-    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
-    padding:18px 20px; box-shadow:var(--shadow-soft);
-  }
-  .prayer-card-head{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:14px;}
-  .prayer-name-en{font-family:'Cinzel',serif; font-size:1.05rem; color:var(--text-strong);}
-  .prayer-name-ar{font-family:'Scheherazade New',serif; font-size:1.3rem; color:var(--gold-400);}
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
 
-  .field-block{margin-bottom:14px;}
-  .field-block:last-child{margin-bottom:0;}
-  .field-label{display:block; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-faint); margin-bottom:6px;}
+    .brand svg {
+      flex-shrink: 0;
+    }
 
-  .toggle-row{display:flex; gap:6px; background:var(--surface-alt); border-radius:9px; padding:3px;}
-  .toggle-opt{flex:1;}
-  .toggle-opt input{position:absolute; opacity:0; pointer-events:none;}
-  .toggle-opt label{
-    display:block; text-align:center; font-size:0.78rem; padding:7px 0; border-radius:7px; cursor:pointer;
-    color:var(--text-dim); transition:background .15s ease, color .15s ease;
-  }
-  .toggle-opt input:checked + label{background:var(--gold-600); color:#191d15; font-weight:600;}
+    .brand-icon {
+      color: var(--gold-500);
+    }
 
-  .time-input, .number-input{
-    width:100%; font-family:'Outfit',sans-serif; font-size:0.88rem; color:var(--text-strong);
-    background:var(--surface-alt); border:1px solid var(--border-strong); border-radius:9px; padding:9px 11px;
-  }
-  .time-input:focus, .number-input:focus{outline:2px solid var(--gold-500); outline-offset:1px;}
-  .time-input:disabled, .number-input:disabled{opacity:0.4; cursor:not-allowed;}
+    .brand-name {
+      font-family: 'Cinzel', serif;
+      font-size: 1.02rem;
+      font-weight: 600;
+      color: #fff;
+      line-height: 1.15;
+      margin: 0;
+    }
 
-  .field-sub{font-size:0.72rem; color:var(--text-faint); margin:6px 0 0;}
+    .brand-sub {
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.68rem;
+      color: var(--moss-400);
+      letter-spacing: 0.06em;
+      margin: 0;
+    }
 
-  .btn{
-    all:unset; cursor:pointer; display:inline-flex; align-items:center; gap:8px;
-    font-family:'Outfit',sans-serif; font-size:0.86rem; font-weight:600; color:#191d15;
-    background:linear-gradient(135deg,#d4a24e,#c9973a); padding:11px 22px; border-radius:11px;
-    box-shadow:0 8px 20px rgba(201,151,58,0.25); transition:transform .12s ease, box-shadow .15s ease;
-  }
-  .btn:hover{transform:translateY(-1px); box-shadow:0 12px 26px rgba(201,151,58,0.35);}
-  .btn svg{width:16px; height:16px;}
+    .side-section-label {
+      font-size: 0.66rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--moss-400);
+      margin: 0 0 6px 4px;
+    }
 
-  .save-bar{position:sticky; bottom:0; padding:16px 0 4px; background:linear-gradient(to top, var(--bg-page) 70%, transparent);}
-</style>
+    .side-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    @media (max-width:900px) {
+      .side-nav {
+        display: none;
+      }
+    }
+
+    .side-navlink {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.88rem;
+      color: var(--moss-100);
+      padding: 10px 12px;
+      border-radius: 10px;
+      text-decoration: none;
+      transition: background .15s ease, color .15s ease;
+    }
+
+    .side-navlink svg {
+      width: 16px;
+      height: 16px;
+      opacity: 0.85;
+      flex-shrink: 0;
+    }
+
+    .side-navlink:hover {
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .side-navlink.is-active {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    .side-nav button {
+      all: unset;
+      cursor: pointer;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.88rem;
+      color: var(--moss-100);
+      padding: 10px 12px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      transition: background .15s ease;
+    }
+
+    .side-nav button .nav-btn-left {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .side-nav button svg {
+      width: 16px;
+      height: 16px;
+      opacity: 0.85;
+      flex-shrink: 0;
+    }
+
+    .side-nav button:hover {
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .side-nav button.is-active {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    .side-nav button .count {
+      font-size: 0.72rem;
+      color: var(--gold-400);
+      background: rgba(212, 176, 106, 0.14);
+      padding: 2px 8px;
+      border-radius: 20px;
+    }
+
+    .sidebar-foot {
+      margin-top: auto;
+      font-size: 0.72rem;
+      color: var(--moss-400);
+      line-height: 1.5;
+    }
+
+    @media (max-width:900px) {
+      .sidebar-foot {
+        display: none;
+      }
+    }
+
+    /* ---------- main ---------- */
+    .main {
+      padding: 30px 34px 60px;
+      min-width: 0;
+    }
+
+    @media (max-width:640px) {
+      .main {
+        padding: 20px 16px 40px;
+      }
+    }
+
+    .topbar {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .topbar h1 {
+      font-size: 1.5rem;
+      color: var(--moss-700);
+    }
+
+    .topbar .eyebrow-ar {
+      font-family: 'Scheherazade New', serif;
+      color: var(--gold-600);
+      font-size: 1.15rem;
+      margin: 0 0 2px;
+    }
+
+    .session-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.78rem;
+      color: var(--moss-500);
+    }
+
+    .session-bar a {
+      color: var(--moss-600);
+      text-decoration: underline;
+    }
+
+    .intro {
+      font-size: 0.86rem;
+      color: var(--moss-500);
+      max-width: 760px;
+      line-height: 1.6;
+      margin: 0 0 24px;
+      padding: 14px 16px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .intro strong {
+      color: var(--moss-700);
+    }
+
+    .flash-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .flash {
+      font-size: 0.82rem;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+    }
+
+    .flash-error {
+      background: #f7e3df;
+      color: #8a3a24;
+      border-color: #e8c3ba;
+    }
+
+    .flash-success {
+      background: var(--moss-50);
+      color: var(--moss-700);
+    }
+
+    .prayer-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .prayer-card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .prayer-card-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .prayer-name-en {
+      font-family: 'Cinzel', serif;
+      font-size: 1.05rem;
+      color: var(--moss-700);
+    }
+
+    .prayer-name-ar {
+      font-family: 'Scheherazade New', serif;
+      font-size: 1.3rem;
+      color: var(--gold-600);
+    }
+
+    .field-block {
+      margin-bottom: 14px;
+    }
+
+    .field-block:last-child {
+      margin-bottom: 0;
+    }
+
+    .field-label {
+      display: block;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--moss-500);
+      margin-bottom: 6px;
+    }
+
+    .toggle-row {
+      display: flex;
+      gap: 6px;
+      background: var(--moss-50);
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      padding: 3px;
+    }
+
+    .toggle-opt {
+      flex: 1;
+    }
+
+    .toggle-opt input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .toggle-opt label {
+      display: block;
+      text-align: center;
+      font-size: 0.78rem;
+      padding: 7px 0;
+      border-radius: 7px;
+      cursor: pointer;
+      color: var(--moss-600);
+      transition: background .15s ease, color .15s ease;
+    }
+
+    .toggle-opt input:checked+label {
+      background: var(--gold-600);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .time-input,
+    .number-input {
+      width: 100%;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.88rem;
+      color: var(--ink);
+      background: #fdfdfb;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      padding: 9px 11px;
+    }
+
+    .time-input:hover,
+    .number-input:hover {
+      border-color: var(--moss-400);
+    }
+
+    .time-input:focus,
+    .number-input:focus {
+      outline: 2px solid var(--gold-400);
+      outline-offset: 1px;
+      border-color: var(--gold-400);
+    }
+
+    .time-input:disabled,
+    .number-input:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .field-sub {
+      font-size: 0.72rem;
+      color: var(--moss-400);
+      margin: 6px 0 0;
+    }
+
+    .btn {
+      all: unset;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.86rem;
+      font-weight: 600;
+      color: #fff;
+      background: var(--gold-600);
+      padding: 11px 22px;
+      border-radius: 11px;
+      box-shadow: var(--shadow-soft);
+      transition: transform .12s ease, background .15s ease, box-shadow .15s ease;
+    }
+
+    .btn:hover {
+      background: #875f1c;
+      transform: translateY(-1px);
+    }
+
+    .btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .save-bar {
+      position: sticky;
+      bottom: 0;
+      padding: 16px 0 4px;
+      background: linear-gradient(to top, var(--paper) 70%, transparent);
+    }
+  </style>
 </head>
+
 <body>
 
-<div class="admin-shell">
-  <aside class="sidebar">
-    <div class="brand">
-      <svg class="brand-icon" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 2a4 4 0 0 1 4 4c0 1.5-.8 2.7-2 3.4V11h3a3 3 0 0 1 3 3v6H4v-6a3 3 0 0 1 3-3h3V9.4C8.8 8.7 8 7.5 8 6a4 4 0 0 1 4-4Z"/>
-        <path d="M9 20v-4a3 3 0 0 1 6 0v4"/>
-      </svg>
-      <div>
-        <p class="brand-name">{{ mosque_name|default('Masjid Admin') }}</p>
-        <p class="brand-sub">ADMIN PANEL</p>
+  <div class="admin-shell">
+
+    {# ─── SIDEBAR ─────────────────────────────────────────── #}
+    {% include "admin_components/_admin_sidebar.html" %}
+
+    {# ─── MAIN ────────────────────────────────────────────── #}
+    <main class="main">
+      <div class="topbar">
+        <div>
+          <p class="eyebrow-ar">أوقات الصلاة</p>
+          <h1>Prayer Time Settings</h1>
+        </div>
+        {% if admin_username is defined and admin_username %}
+        <div class="session-bar">
+          <span>Signed in as <strong>{{ admin_username }}</strong></span>
+          <a href="{{ url_for('admin.logout') }}">Log out</a>
+        </div>
+        {% endif %}
       </div>
-    </div>
 
-    <div>
-      <p class="side-section-label">Sections</p>
-      <nav class="side-nav">
-        <a href="{{ url_for('admin.dashboard') }}" class="side-navlink">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V6a2 2 0 0 1 2-2h9l5 5v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><path d="M14 4v5h5"/><path d="M8 13h8M8 17h5"/></svg>
-          Registrations
-        </a>
-        <a href="{{ url_for('admin.prayer_times') }}" class="side-navlink is-active">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
-          Prayer Times
-        </a>
-      </nav>
-    </div>
+      <p class="intro">
+        <strong>Azan</strong> can come automatically from the Aladhan API, or you can set a manual time per prayer
+        if your mosque's actual announced Azan differs from the calculated one.
+        <strong>Iqama</strong> (congregation start) is always set here — either a fixed number of minutes after Azan,
+        or a fixed clock time (useful for Jumu'ah). No API can know your Iqama practice, so this part is manual by
+        design.
+      </p>
 
-    <p class="sidebar-foot">Azan can be automatic (Aladhan API) or a manual override per prayer. Iqama is always set locally here — no API provides that.</p>
-  </aside>
-
-  <main class="main">
-    <div class="topbar">
-      <div>
-        <p class="eyebrow-ar">أوقات الصلاة</p>
-        <h1>Prayer Time Settings</h1>
-      </div>
-      {% if admin_username is defined and admin_username %}
-      <div class="session-bar">
-        <span>Signed in as <strong>{{ admin_username }}</strong></span>
-        <a href="{{ url_for('admin.logout') }}">Log out</a>
-      </div>
-      {% endif %}
-    </div>
-
-    <p class="intro">
-      <strong>Azan</strong> can come automatically from the Aladhan API, or you can set a manual time per prayer
-      if your mosque's actual announced Azan differs from the calculated one.
-      <strong>Iqama</strong> (congregation start) is always set here — either a fixed number of minutes after Azan,
-      or a fixed clock time (useful for Jumu'ah). No API can know your Iqama practice, so this part is manual by design.
-    </p>
-
-    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
       <div class="flash-stack">
         {% for category, msg in messages %}
@@ -193,113 +521,113 @@
         {% endfor %}
       </div>
       {% endif %}
-    {% endwith %}
+      {% endwith %}
 
-    <form method="POST" action="{{ url_for('admin.prayer_times') }}" novalidate>
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+      <form method="POST" action="{{ url_for('admin.prayer_times') }}" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
 
-      <div class="prayer-grid">
-        {% for name in prayer_order %}
-        {% set s = settings[name] %}
-        <div class="prayer-card">
-          <div class="prayer-card-head">
-            <span class="prayer-name-en">{{ name }}</span>
-            <span class="prayer-name-ar">{{ prayer_arabic[name] }}</span>
-          </div>
+        <div class="prayer-grid">
+          {% for name in prayer_order %}
+          {% set s = settings[name] %}
+          <div class="prayer-card">
+            <div class="prayer-card-head">
+              <span class="prayer-name-en">{{ name }}</span>
+              <span class="prayer-name-ar">{{ prayer_arabic[name] }}</span>
+            </div>
 
-          <div class="field-block">
-            <label class="field-label">Azan source</label>
-            <div class="toggle-row">
-              <div class="toggle-opt">
-                <input type="radio" name="{{ name }}_azan_source" id="{{ name }}-azan-api" value="api"
-                  {{ 'checked' if s.azan_source != 'manual' else '' }}
-                  data-azan-toggle="{{ name }}" data-value="api">
-                <label for="{{ name }}-azan-api">API</label>
-              </div>
-              <div class="toggle-opt">
-                <input type="radio" name="{{ name }}_azan_source" id="{{ name }}-azan-manual" value="manual"
-                  {{ 'checked' if s.azan_source == 'manual' else '' }}
-                  data-azan-toggle="{{ name }}" data-value="manual">
-                <label for="{{ name }}-azan-manual">Manual</label>
+            <div class="field-block">
+              <label class="field-label">Azan source</label>
+              <div class="toggle-row">
+                <div class="toggle-opt">
+                  <input type="radio" name="{{ name }}_azan_source" id="{{ name }}-azan-api" value="api" {{ 'checked' if
+                    s.azan_source !='manual' else '' }} data-azan-toggle="{{ name }}" data-value="api">
+                  <label for="{{ name }}-azan-api">API</label>
+                </div>
+                <div class="toggle-opt">
+                  <input type="radio" name="{{ name }}_azan_source" id="{{ name }}-azan-manual" value="manual"
+                    {{ 'checked' if s.azan_source=='manual' else '' }} data-azan-toggle="{{ name }}"
+                    data-value="manual">
+                  <label for="{{ name }}-azan-manual">Manual</label>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div class="field-block">
-            <label class="field-label" for="{{ name }}-manual-time">Manual Azan time</label>
-            <input class="time-input" type="time" id="{{ name }}-manual-time" name="{{ name }}_manual_azan_time"
-              value="{{ s.manual_azan_time.strftime('%H:%M') if s.manual_azan_time else '' }}"
-              data-azan-manual-field="{{ name }}" {{ '' if s.azan_source == 'manual' else 'disabled' }}>
-            <p class="field-sub">Only used when Azan source is set to Manual.</p>
-          </div>
+            <div class="field-block">
+              <label class="field-label" for="{{ name }}-manual-time">Manual Azan time</label>
+              <input class="time-input" type="time" id="{{ name }}-manual-time" name="{{ name }}_manual_azan_time"
+                value="{{ s.manual_azan_time.strftime('%H:%M') if s.manual_azan_time else '' }}"
+                data-azan-manual-field="{{ name }}" {{ '' if s.azan_source=='manual' else 'disabled' }}>
+              <p class="field-sub">Only used when Azan source is set to Manual.</p>
+            </div>
 
-          <div class="field-block">
-            <label class="field-label">Iqama mode</label>
-            <div class="toggle-row">
-              <div class="toggle-opt">
-                <input type="radio" name="{{ name }}_iqama_mode" id="{{ name }}-iqama-offset" value="offset"
-                  {{ 'checked' if s.mode != 'fixed' else '' }}
-                  data-iqama-toggle="{{ name }}" data-value="offset">
-                <label for="{{ name }}-iqama-offset">Offset</label>
-              </div>
-              <div class="toggle-opt">
-                <input type="radio" name="{{ name }}_iqama_mode" id="{{ name }}-iqama-fixed" value="fixed"
-                  {{ 'checked' if s.mode == 'fixed' else '' }}
-                  data-iqama-toggle="{{ name }}" data-value="fixed">
-                <label for="{{ name }}-iqama-fixed">Fixed time</label>
+            <div class="field-block">
+              <label class="field-label">Iqama mode</label>
+              <div class="toggle-row">
+                <div class="toggle-opt">
+                  <input type="radio" name="{{ name }}_iqama_mode" id="{{ name }}-iqama-offset" value="offset"
+                    {{ 'checked' if s.mode !='fixed' else '' }} data-iqama-toggle="{{ name }}" data-value="offset">
+                  <label for="{{ name }}-iqama-offset">Offset</label>
+                </div>
+                <div class="toggle-opt">
+                  <input type="radio" name="{{ name }}_iqama_mode" id="{{ name }}-iqama-fixed" value="fixed"
+                    {{ 'checked' if s.mode=='fixed' else '' }} data-iqama-toggle="{{ name }}" data-value="fixed">
+                  <label for="{{ name }}-iqama-fixed">Fixed time</label>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div class="field-block">
-            <label class="field-label" for="{{ name }}-offset">Offset (minutes after Azan)</label>
-            <input class="number-input" type="number" min="0" max="120" id="{{ name }}-offset"
-              name="{{ name }}_offset_minutes" value="{{ s.offset_minutes }}"
-              data-iqama-offset-field="{{ name }}" {{ '' if s.mode != 'fixed' else 'disabled' }}>
-          </div>
+            <div class="field-block">
+              <label class="field-label" for="{{ name }}-offset">Offset (minutes after Azan)</label>
+              <input class="number-input" type="number" min="0" max="120" id="{{ name }}-offset"
+                name="{{ name }}_offset_minutes" value="{{ s.offset_minutes }}" data-iqama-offset-field="{{ name }}"
+                {{ '' if s.mode !='fixed' else 'disabled' }}>
+            </div>
 
-          <div class="field-block">
-            <label class="field-label" for="{{ name }}-fixed">Fixed Iqama time</label>
-            <input class="time-input" type="time" id="{{ name }}-fixed" name="{{ name }}_fixed_time"
-              value="{{ s.fixed_time.strftime('%H:%M') if s.fixed_time else '' }}"
-              data-iqama-fixed-field="{{ name }}" {{ '' if s.mode == 'fixed' else 'disabled' }}>
+            <div class="field-block">
+              <label class="field-label" for="{{ name }}-fixed">Fixed Iqama time</label>
+              <input class="time-input" type="time" id="{{ name }}-fixed" name="{{ name }}_fixed_time"
+                value="{{ s.fixed_time.strftime('%H:%M') if s.fixed_time else '' }}" data-iqama-fixed-field="{{ name }}"
+                {{ '' if s.mode=='fixed' else 'disabled' }}>
+            </div>
           </div>
+          {% endfor %}
         </div>
-        {% endfor %}
-      </div>
 
-      <div class="save-bar">
-        <button type="submit" class="btn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
-          Save prayer time settings
-        </button>
-      </div>
-    </form>
-  </main>
-</div>
+        <div class="save-bar">
+          <button type="submit" class="btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 6 9 17l-5-5" />
+            </svg>
+            Save prayer time settings
+          </button>
+        </div>
+      </form>
+    </main>
+  </div>
 
-<script>
-  document.querySelectorAll('[data-azan-toggle]').forEach(function (radio) {
-    radio.addEventListener('change', function () {
-      var name = radio.dataset.azanToggle;
-      var manualField = document.querySelector('[data-azan-manual-field="' + name + '"]');
-      manualField.disabled = radio.dataset.value !== 'manual' || !radio.checked;
-      // re-check sibling to catch the case where the *other* radio fired first
-      var manualChecked = document.querySelector('input[name="' + name + '_azan_source"][value="manual"]').checked;
-      manualField.disabled = !manualChecked;
+  <script>
+    document.querySelectorAll('[data-azan-toggle]').forEach(function (radio) {
+      radio.addEventListener('change', function () {
+        var name = radio.dataset.azanToggle;
+        var manualField = document.querySelector('[data-azan-manual-field="' + name + '"]');
+        manualField.disabled = radio.dataset.value !== 'manual' || !radio.checked;
+        // re-check sibling to catch the case where the *other* radio fired first
+        var manualChecked = document.querySelector('input[name="' + name + '_azan_source"][value="manual"]').checked;
+        manualField.disabled = !manualChecked;
+      });
     });
-  });
 
-  document.querySelectorAll('[data-iqama-toggle]').forEach(function (radio) {
-    radio.addEventListener('change', function () {
-      var name = radio.dataset.iqamaToggle;
-      var offsetField = document.querySelector('[data-iqama-offset-field="' + name + '"]');
-      var fixedField = document.querySelector('[data-iqama-fixed-field="' + name + '"]');
-      var fixedChecked = document.querySelector('input[name="' + name + '_iqama_mode"][value="fixed"]').checked;
-      offsetField.disabled = fixedChecked;
-      fixedField.disabled = !fixedChecked;
+    document.querySelectorAll('[data-iqama-toggle]').forEach(function (radio) {
+      radio.addEventListener('change', function () {
+        var name = radio.dataset.iqamaToggle;
+        var offsetField = document.querySelector('[data-iqama-offset-field="' + name + '"]');
+        var fixedField = document.querySelector('[data-iqama-fixed-field="' + name + '"]');
+        var fixedChecked = document.querySelector('input[name="' + name + '_iqama_mode"][value="fixed"]').checked;
+        offsetField.disabled = fixedChecked;
+        fixedField.disabled = !fixedChecked;
+      });
     });
-  });
-</script>
+  </script>
 </body>
+
 </html>

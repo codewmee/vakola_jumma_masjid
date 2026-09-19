@@ -1,0 +1,344 @@
+<!-- app/templates/admin_components/_admin_sidebar.html -->
+
+<style>
+    /* ------------------------------------------------------------------
+       Responsive sidebar
+       ≥ 900px : fixed sidebar, collapsible with a hamburger
+       < 900px : floating, rounded, glass nav pinned to the bottom
+       Remove any old width / position / grid-column rules for .sidebar
+       from your main stylesheet — this block now controls layout.
+       ------------------------------------------------------------------ */
+    :root {
+        --sb-w: 272px;
+        --sb-accent: var(--accent, #0f766e);
+        --sb-btn-bg: var(--surface, #ffffff);
+        --sb-btn-text: var(--text, #1f2937);
+        --sb-btn-border: rgba(0, 0, 0, 0.1);
+
+        --glass-bg: rgba(255, 255, 255, 0.55);
+        --glass-border: rgba(255, 255, 255, 0.6);
+        --glass-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
+        --glass-text: #334155;
+        --glass-active-bg: rgba(15, 118, 110, 0.14);
+        --glass-active-text: var(--sb-accent);
+    }
+    @media (prefers-color-scheme: dark) {
+        :root {
+            --sb-btn-bg: #1e293b;
+            --sb-btn-text: #e2e8f0;
+            --sb-btn-border: rgba(255, 255, 255, 0.12);
+
+            --glass-bg: rgba(30, 41, 59, 0.5);
+            --glass-border: rgba(255, 255, 255, 0.14);
+            --glass-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+            --glass-text: #cbd5e1;
+            --glass-active-bg: rgba(94, 234, 212, 0.16);
+            --glass-active-text: #5eead4;
+        }
+    }
+
+    /* Hamburger buttons (shared) */
+    .sidebar-toggle,
+    .sidebar-open {
+        display: inline-grid;
+        place-items: center;
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        border-radius: 12px;
+        border: 1px solid var(--sb-btn-border);
+        background: var(--sb-btn-bg);
+        color: var(--sb-btn-text);
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+    .sidebar-toggle:hover,
+    .sidebar-open:hover { border-color: var(--sb-accent); color: var(--sb-accent); }
+    .sidebar-toggle:focus-visible,
+    .sidebar-open:focus-visible { outline: 2px solid var(--sb-accent); outline-offset: 2px; }
+    .sidebar-toggle { margin-left: auto; }
+    .sidebar-open { display: none; }
+
+    .nav-label-short { display: none; }
+
+    /* ---------- Desktop / large screens ---------- */
+    @media (min-width: 900px) {
+        /* #admin-sidebar (ID) outranks any old .sidebar class rules */
+        #admin-sidebar {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: auto;
+            width: var(--sb-w);
+            min-width: var(--sb-w);
+            max-width: var(--sb-w);
+            height: 100vh;
+            height: 100dvh;
+            margin: 0;
+            box-sizing: border-box;
+            overflow-x: hidden;
+            overflow-y: auto;
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            grid-column: auto;
+            grid-row: auto;
+            transform: none;
+        }
+        #admin-sidebar .brand { display: flex; align-items: center; gap: 12px; }
+        #admin-sidebar .brand > div { min-width: 0; }
+
+        /* The sidebar is out of the flow now, so whatever wraps it (grid, flex
+           or <body>) becomes a plain block and reserves the sidebar's width
+           with left padding. No need to know your layout class names. */
+        :has(> #admin-sidebar) {
+            display: block;
+            padding-left: var(--sb-w);
+            box-sizing: border-box;
+        }
+
+        html.sb-ready #admin-sidebar { transition: transform .3s ease, visibility 0s; }
+        html.sb-ready :has(> #admin-sidebar) { transition: padding-left .3s ease; }
+
+        html.sb-collapsed #admin-sidebar {
+            transform: translateX(-100%);
+            visibility: hidden;
+            pointer-events: none;
+        }
+        html.sb-ready.sb-collapsed #admin-sidebar { transition: transform .3s ease, visibility 0s .3s; }
+        html.sb-collapsed :has(> #admin-sidebar) { padding-left: 0; }
+
+        html.sb-collapsed .sidebar-open {
+            display: inline-grid;
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            z-index: 60;
+        }
+    }
+
+    /* ---------- Small screens: floating glass nav ---------- */
+    @media (max-width: 899.98px) {
+        body { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+
+        aside.sidebar {
+            position: fixed;
+            left: 50%;
+            bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+            top: auto;
+            transform: translateX(-50%);
+            width: min(calc(100% - 24px), 520px);
+            height: auto;
+            margin: 0;
+            padding: 8px;
+            display: flex;
+            flex-direction: row;
+            align-items: stretch;
+            gap: 4px;
+            overflow: visible;
+            z-index: 50;
+            border-radius: 28px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--glass-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+            -webkit-backdrop-filter: blur(18px) saturate(170%);
+            backdrop-filter: blur(18px) saturate(170%);
+            color: var(--glass-text);
+        }
+        @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+            aside.sidebar { background: rgba(255, 255, 255, 0.94); }
+            @media (prefers-color-scheme: dark) { aside.sidebar { background: rgba(30, 41, 59, 0.96); } }
+        }
+
+        aside.sidebar .brand,
+        aside.sidebar .side-section-label,
+        aside.sidebar .sidebar-foot,
+        aside.sidebar .sidebar-toggle,
+        .sidebar-open { display: none !important; }
+
+        /* Flatten groups so every item is a direct flex child */
+        aside.sidebar .side-group,
+        aside.sidebar .side-nav { display: contents; }
+
+        aside.sidebar .side-navlink,
+        aside.sidebar .side-nav button {
+            position: relative;
+            flex: 1 1 0;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            padding: 8px 2px;
+            border: 0;
+            border-radius: 20px;
+            background: transparent;
+            color: var(--glass-text);
+            font: inherit;
+            font-size: 11px;
+            font-weight: 500;
+            line-height: 1.2;
+            text-decoration: none;
+            text-align: center;
+            white-space: nowrap;
+            width: auto;
+        }
+        aside.sidebar .side-nav .nav-btn-left {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+        }
+        aside.sidebar .side-navlink svg,
+        aside.sidebar .nav-btn-left svg { width: 20px; height: 20px; }
+
+        aside.sidebar .side-navlink.is-active,
+        aside.sidebar .side-nav button.is-active {
+            background: var(--glass-active-bg);
+            color: var(--glass-active-text);
+        }
+        aside.sidebar .side-navlink:focus-visible,
+        aside.sidebar .side-nav button:focus-visible {
+            outline: 2px solid var(--sb-accent);
+            outline-offset: -2px;
+        }
+
+        .nav-label-full { display: none; }
+        .nav-label-short { display: inline; }
+
+        /* Counts become small badges on the icon */
+        aside.sidebar .side-nav button .count {
+            position: absolute;
+            top: 2px;
+            left: calc(50% + 6px);
+            min-width: 16px;
+            padding: 0 4px;
+            border-radius: 999px;
+            background: var(--sb-accent);
+            color: #fff;
+            font-size: 10px;
+            font-weight: 600;
+            line-height: 16px;
+            text-align: center;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        html.sb-ready #admin-sidebar,
+        html.sb-ready :has(> #admin-sidebar) { transition: none !important; }
+    }
+</style>
+
+<!-- Reopen button: shown on large screens only while the sidebar is collapsed -->
+<button type="button" class="sidebar-open" data-sidebar-toggle aria-controls="admin-sidebar" aria-expanded="false" aria-label="Open sidebar">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+</button>
+
+<aside class="sidebar" id="admin-sidebar">
+    <div class="brand">
+        <svg class="brand-icon" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a4 4 0 0 1 4 4c0 1.5-.8 2.7-2 3.4V11h3a3 3 0 0 1 3 3v6H4v-6a3 3 0 0 1 3-3h3V9.4C8.8 8.7 8 7.5 8 6a4 4 0 0 1 4-4Z" />
+            <path d="M9 20v-4a3 3 0 0 1 6 0v4" />
+        </svg>
+        <div>
+            <p class="brand-name">{{ mosque_name|default('Masjid Admin') }}</p>
+            <p class="brand-sub">ADMIN PANEL</p>
+        </div>
+        <button type="button" class="sidebar-toggle" data-sidebar-toggle aria-controls="admin-sidebar" aria-expanded="true" aria-label="Close sidebar">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+        </button>
+    </div>
+
+    <div class="side-group">
+        <p class="side-section-label">Sections</p>
+        <nav class="side-nav" aria-label="Sections">
+            <a href="{{ url_for('admin.dashboard') }}" class="side-navlink {{ 'is-active' if active_page == 'registrations' else '' }}">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V6a2 2 0 0 1 2-2h9l5 5v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z" /><path d="M14 4v5h5" /><path d="M8 13h8M8 17h5" /></svg>
+                <span class="nav-label-full">Registrations</span><span class="nav-label-short">Registrations</span>
+            </a>
+            <a href="{{ url_for('admin.prayer_times') }}" class="side-navlink {{ 'is-active' if active_page == 'prayer_times' else '' }}">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" /></svg>
+                <span class="nav-label-full">Prayer Times</span><span class="nav-label-short">Prayers</span>
+            </a>
+        </nav>
+    </div>
+
+    {% if active_page == 'registrations' %}
+    <div class="side-group">
+        <p class="side-section-label">Filter by type</p>
+        <nav class="side-nav" aria-label="Filter by type">
+            <button type="button" data-nav-filter="all" class="is-active">
+                <span class="nav-btn-left">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="4" width="18" height="16" rx="2" />
+                        <path d="M3 9h18" />
+                        <path d="M8 3v3M16 3v3" />
+                    </svg>
+                    <span class="nav-label-full">Overview</span><span class="nav-label-short">All</span>
+                </span>
+                <span class="count" id="nav-count-all">0</span>
+            </button>
+            <button type="button" data-nav-filter="nikah">
+                <span class="nav-btn-left">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="9" cy="14" r="5" />
+                        <circle cx="15" cy="14" r="5" />
+                    </svg>
+                    <span class="nav-label-full">Nikah Applications</span><span class="nav-label-short">Nikah</span>
+                </span>
+                <span class="count" id="nav-count-nikah">0</span>
+            </button>
+            <button type="button" data-nav-filter="madrasa">
+                <span class="nav-btn-left">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 5.5C4 4.67 4.67 4 5.5 4H12v16H5.5A1.5 1.5 0 0 1 4 18.5v-13Z" />
+                        <path d="M20 5.5c0-.83-.67-1.5-1.5-1.5H12v16h6.5a1.5 1.5 0 0 0 1.5-1.5v-13Z" />
+                    </svg>
+                    <span class="nav-label-full">Madrasa Admissions</span><span class="nav-label-short">Madrasa</span>
+                </span>
+                <span class="count" id="nav-count-madrasa">0</span>
+            </button>
+        </nav>
+    </div>
+    {% endif %}
+
+    <p class="sidebar-foot">
+        {% if active_page == 'registrations' %}
+        Registrations submitted from the mosque's Nikah Nama and Madrasa Admissions forms are collected here automatically — or add one directly with "New Registration".
+        {% elif active_page == 'prayer_times' %}
+        Azan can be automatic (Aladhan API) or a manual override per prayer. Iqama is always set locally here — no API provides that.
+        {% endif %}
+    </p>
+</aside>
+
+<script>
+    (function () {
+        var root = document.documentElement;
+        var KEY = 'adminSidebarCollapsed';
+
+        try { if (localStorage.getItem(KEY) === '1') root.classList.add('sb-collapsed'); } catch (e) {}
+
+        function sync() {
+            var collapsed = root.classList.contains('sb-collapsed');
+            document.querySelectorAll('[data-sidebar-toggle]').forEach(function (btn) {
+                btn.setAttribute('aria-expanded', String(!collapsed));
+            });
+        }
+
+        document.addEventListener('click', function (e) {
+            var btn = e.target.closest('[data-sidebar-toggle]');
+            if (!btn) return;
+            var collapsed = root.classList.toggle('sb-collapsed');
+            try { localStorage.setItem(KEY, collapsed ? '1' : '0'); } catch (err) {}
+            sync();
+        });
+
+        sync();
+        // Enable transitions only after first paint so the saved state doesn't animate on load
+        requestAnimationFrame(function () {
+            requestAnimationFrame(function () { root.classList.add('sb-ready'); });
+        });
+    })();
+</script>

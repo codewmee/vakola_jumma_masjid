@@ -196,6 +196,47 @@
       border-radius: 20px;
     }
 
+    .side-section-label {
+      font-size: 0.66rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--moss-400);
+      margin: 0 0 6px 4px;
+    }
+
+    .side-navlink {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.88rem;
+      color: var(--moss-100);
+      padding: 10px 12px;
+      border-radius: 10px;
+      text-decoration: none;
+      transition: background .15s ease, color .15s ease;
+    }
+
+    .side-navlink svg {
+      width: 16px;
+      height: 16px;
+      opacity: 0.85;
+      flex-shrink: 0;
+    }
+
+    .side-navlink:hover {
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .side-navlink.is-active {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    .brand-icon {
+      color: var(--gold-500);
+    }
+
     .sidebar-foot {
       margin-top: auto;
       font-size: 0.72rem;
@@ -1385,55 +1426,7 @@
   <div class="admin-shell">
 
     {# ─── SIDEBAR ─────────────────────────────────────────── #}
-    <aside class="sidebar">
-      <div class="brand">
-        <svg width="26" height="26" viewBox="0 0 32 32" fill="none">
-          <path d="M20 6a12 12 0 1 0 0 20A10 10 0 1 1 20 6z" fill="#d4b06a" opacity="0.9" />
-        </svg>
-        <div>
-          <p class="brand-name">{{ mosque_name|default('Masjid Admin') }}</p>
-          <p class="brand-sub">ADMIN PANEL</p>
-        </div>
-      </div>
-      <nav class="side-nav">
-        <button type="button" data-nav-filter="all" class="is-active">
-          <span class="nav-btn-left">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
-              stroke-linejoin="round">
-              <rect x="3" y="4" width="18" height="16" rx="2" />
-              <path d="M3 9h18" />
-              <path d="M8 3v3M16 3v3" />
-            </svg>
-            Overview
-          </span>
-          <span class="count" id="nav-count-all">0</span>
-        </button>
-        <button type="button" data-nav-filter="nikah">
-          <span class="nav-btn-left">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
-              stroke-linejoin="round">
-              <circle cx="9" cy="14" r="5" />
-              <circle cx="15" cy="14" r="5" />
-            </svg>
-            Nikah Applications
-          </span>
-          <span class="count" id="nav-count-nikah">0</span>
-        </button>
-        <button type="button" data-nav-filter="madrasa">
-          <span class="nav-btn-left">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
-              stroke-linejoin="round">
-              <path d="M4 5.5C4 4.67 4.67 4 5.5 4H12v16H5.5A1.5 1.5 0 0 1 4 18.5v-13Z" />
-              <path d="M20 5.5c0-.83-.67-1.5-1.5-1.5H12v16h6.5a1.5 1.5 0 0 0 1.5-1.5v-13Z" />
-            </svg>
-            Madrasa Admissions
-          </span>
-          <span class="count" id="nav-count-madrasa">0</span>
-        </button>
-      </nav>
-      <p class="sidebar-foot">Registrations submitted from the mosque's Nikah Nama and Madrasa Admissions forms are
-        collected here automatically — or add one directly with "New Registration".</p>
-    </aside>
+    {% include "admin_components/_admin_sidebar.html" %}
 
     {# ─── MAIN ────────────────────────────────────────────── #}
     <main class="main">
