@@ -1,0 +1,716 @@
+{# ─── MADRASA REGISTRATION (dialog + preview) — self-contained ──────────────
+Simple 2-section form — uses the compact `.modal-glass` dialog rather
+than the full nr-shell workspace the Nikah form needs. Holds its own CSS
+and JS. Element ids are prefixed `madrasa-` so this file can sit alongside
+nikah_modal.html on the same page with no id collisions. Form styles are
+scoped under #madrasa-reg-modal so they never clash with the Nikah partial.
+
+Needs from the host page:
+• :root vars (--moss-*, --gold-*, --line, --ink, --danger, --radius,
+--shadow-soft, --nikah-bg, --nikah, --madrasa)
+• .modal-overlay / .modal-glass / .modal-close / .modal-head / .modal-divider /
+.modal-foot / .modal-actions / .type-icon, .btn-glass* buttons, @keyframes modal-in
+•
+<meta name="csrf-token">, fonts (Cinzel, Outfit, Scheherazade New)
+• #reg-table-body (new rows are inserted here)
+
+Open it with any element carrying data-open-madrasa-reg (or MadrasaReg.open()).
+After a save it fires document 'registrations:changed' with detail {row, type}. ─── #}
+
+<style>
+  /* the preview sits on top of the registration dialog */
+  #madrasa-cert-preview-modal {
+    z-index: 90;
+  }
+
+  #madrasa-cert-preview-title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  #madrasa-cert-preview-modal .modal-foot .field-error {
+    flex: 1 1 200px;
+    text-align: center;
+  }
+
+  /* ---------- form (scoped) ---------- */
+  #madrasa-reg-modal .nr-sec {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 22px 26px 26px;
+    box-shadow: var(--shadow-soft);
+  }
+
+  @media (max-width:640px) {
+    #madrasa-reg-modal .nr-sec {
+      padding: 18px 16px 20px;
+    }
+  }
+
+  #madrasa-reg-modal .nr-sec-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+
+  #madrasa-reg-modal .nr-sec-head h4 {
+    font-size: 1.05rem;
+    color: var(--moss-700);
+  }
+
+  #madrasa-reg-modal .nr-tag {
+    margin-left: auto;
+    font-size: 0.7rem;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--moss-50);
+    color: var(--moss-500);
+  }
+
+  #madrasa-reg-modal .nr-tag.req {
+    background: var(--nikah-bg);
+    color: var(--nikah);
+  }
+
+  #madrasa-reg-modal .fg {
+    display: grid;
+    gap: 16px 18px;
+  }
+
+  #madrasa-reg-modal .fg>* {
+    min-width: 0;
+  }
+
+  #madrasa-reg-modal .fg-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (max-width:760px) {
+    #madrasa-reg-modal .fg-2 {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  #madrasa-reg-modal .field-label {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--moss-600);
+    margin: 0 0 6px;
+  }
+
+  #madrasa-reg-modal .field-label .req {
+    color: var(--danger);
+    font-style: normal;
+    margin-left: 2px;
+  }
+
+  #madrasa-reg-modal .field-input {
+    display: block;
+    width: 100%;
+    min-height: 46px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.95rem;
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    padding: 11px 14px;
+    background: #fdfdfb;
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+
+  #madrasa-reg-modal .field-input:hover {
+    border-color: var(--moss-400);
+  }
+
+  #madrasa-reg-modal .field-input:focus {
+    outline: none;
+    border-color: var(--gold-500);
+    box-shadow: 0 0 0 3px rgba(201, 151, 58, 0.22);
+  }
+
+  #madrasa-reg-modal .field-input:user-invalid {
+    border-color: #c46a4a;
+    background: #fff6f3;
+  }
+
+  #madrasa-reg-modal .field-error,
+  #madrasa-cert-preview-modal .field-error {
+    font-size: 0.78rem;
+    color: var(--danger);
+    min-height: 14px;
+    margin: 0;
+  }
+
+  /* ---------- certificate preview sheet ---------- */
+  .cert-sheet {
+    border: 3px double var(--moss-600);
+    border-radius: 6px;
+    padding: 28px 30px;
+    background:
+      radial-gradient(circle at 0% 0%, rgba(201, 151, 58, 0.07), transparent 40%),
+      radial-gradient(circle at 100% 100%, rgba(110, 129, 101, 0.10), transparent 45%),
+      #fffdf7;
+    position: relative;
+  }
+
+  .cert-sheet::before {
+    content: '✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦';
+    display: block;
+    text-align: center;
+    color: var(--gold-500);
+    font-size: 0.7rem;
+    letter-spacing: 4px;
+    margin-bottom: 16px;
+    opacity: 0.75;
+  }
+
+  .cert-header {
+    text-align: center;
+    margin-bottom: 18px;
+  }
+
+  .cert-bismillah {
+    font-family: 'Scheherazade New', serif;
+    color: var(--moss-700);
+    font-size: 1.4rem;
+    margin: 0;
+  }
+
+  .cert-title-ar {
+    font-family: 'Scheherazade New', serif;
+    color: var(--gold-600);
+    font-size: 2.4rem;
+    margin: 6px 0 0;
+  }
+
+  .cert-title-en {
+    font-family: 'Cinzel', serif;
+    font-size: 1.5rem;
+    color: var(--moss-700);
+    letter-spacing: 0.06em;
+    margin: 2px 0 0;
+  }
+
+  .cert-mosque-line {
+    font-size: 0.82rem;
+    color: var(--moss-500);
+    margin: 8px 0 0;
+  }
+
+  .cert-mosque-name {
+    font-weight: 600;
+    color: var(--moss-700);
+  }
+
+  .cert-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 18px;
+  }
+
+  .cert-table tr {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .cert-table tr:last-child {
+    border-bottom: none;
+  }
+
+  .cert-table td {
+    padding: 12px 4px;
+    vertical-align: top;
+  }
+
+  .cert-role {
+    width: 150px;
+    font-family: 'Cinzel', serif;
+    font-size: 0.78rem;
+    color: var(--gold-600);
+  }
+
+  .cert-role .cert-role-ar {
+    display: block;
+    font-family: 'Scheherazade New', serif;
+    font-size: 1.05rem;
+    color: var(--moss-700);
+    margin-bottom: 2px;
+  }
+
+  .cert-person-name {
+    font-weight: 600;
+    color: var(--moss-700);
+    font-size: 0.95rem;
+  }
+
+  .cert-person-meta {
+    font-size: 0.8rem;
+    color: var(--moss-500);
+    margin-top: 2px;
+  }
+
+  .cert-empty {
+    color: var(--moss-400);
+    font-style: italic;
+  }
+
+  .cert-footer-note {
+    text-align: center;
+    font-size: 0.72rem;
+    color: var(--moss-400);
+    margin-top: 16px;
+  }
+
+  /* ---------- print ----------
+     body.is-printing is set only when the preview's Print button is pressed.
+     @page and the dashboard hiding (.admin-shell) live in the host page. */
+  @media print {
+    body.is-printing #madrasa-reg-modal {
+      display: none !important;
+    }
+
+    body.is-printing #madrasa-cert-preview-modal.is-print-active {
+      display: block !important;
+      position: static;
+      inset: auto;
+      padding: 0;
+      overflow: visible;
+      background: none !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+    }
+
+    body.is-printing #madrasa-cert-preview-modal .modal-glass {
+      position: static;
+      width: 100%;
+      max-width: none;
+      max-height: none;
+      overflow: visible;
+      margin: 0;
+      padding: 6mm;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+      background: #fff !important;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      animation: none;
+    }
+
+    body.is-printing #madrasa-cert-preview-modal .modal-close,
+    body.is-printing #madrasa-cert-preview-modal .modal-foot {
+      display: none !important;
+    }
+
+    body.is-printing #madrasa-cert-preview-modal,
+    body.is-printing #madrasa-cert-preview-modal * {
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+  }
+</style>
+
+{# ─── MADRASA REGISTRATION DIALOG ─────────────────────────────── #}
+<div class="modal-overlay" id="madrasa-reg-modal">
+  <div class="modal-glass" role="dialog" aria-modal="true" aria-labelledby="madrasa-reg-title">
+    <button type="button" class="modal-close" id="madrasa-new-reg-close" aria-label="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M18 6 6 18M6 6l12 12" />
+      </svg>
+    </button>
+
+    <div class="modal-head">
+      <div class="type-icon madrasa">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M4 5.5C4 4.67 4.67 4 5.5 4H12v16H5.5A1.5 1.5 0 0 1 4 18.5v-13Z" />
+          <path d="M20 5.5c0-.83-.67-1.5-1.5-1.5H12v16h6.5a1.5 1.5 0 0 0 1.5-1.5v-13Z" />
+        </svg>
+      </div>
+      <div>
+        <p class="modal-arabic">داخلہ مدرسہ</p>
+        <h3 id="madrasa-reg-title" class="modal-title">New Madrasa Admission</h3>
+        <p class="modal-meta">For walk-ins, phone bookings and paper forms.</p>
+      </div>
+    </div>
+    <div class="modal-divider"></div>
+
+    <form id="form-madrasa-direct" novalidate>
+      <section class="nr-sec" style="margin-bottom:16px;">
+        <div class="nr-sec-head">
+          <h4>Child</h4>
+          <span class="nr-tag req">Required</span>
+        </div>
+        <div class="fg fg-2">
+          <div>
+            <label class="field-label" for="m-child-name"><span>Full name<i class="req">*</i></span></label>
+            <input id="m-child-name" name="child_name" type="text" required maxlength="120" class="field-input">
+          </div>
+          <div>
+            <label class="field-label" for="m-child-age"><span>Age<i class="req">*</i></span></label>
+            <input id="m-child-age" name="child_age" type="number" inputmode="numeric" min="5" max="16" required
+              class="field-input">
+          </div>
+        </div>
+      </section>
+
+      <section class="nr-sec" style="margin-bottom:16px;">
+        <div class="nr-sec-head">
+          <h4>Parent / Guardian</h4>
+          <span class="nr-tag req">Required</span>
+        </div>
+        <div class="fg fg-2">
+          <div>
+            <label class="field-label" for="m-parent-name"><span>Full name<i class="req">*</i></span></label>
+            <input id="m-parent-name" name="parent_name" type="text" required maxlength="120" class="field-input">
+          </div>
+          <div>
+            <label class="field-label" for="m-contact"><span>Contact number<i class="req">*</i></span></label>
+            <input id="m-contact" name="contact" type="tel" required maxlength="30" class="field-input">
+          </div>
+        </div>
+      </section>
+
+      <section class="nr-sec">
+        <div class="nr-sec-head">
+          <h4>Status</h4>
+        </div>
+        <div class="fg fg-2">
+          <div>
+            <label class="field-label" for="m-status"><span>Record status</span></label>
+            <select id="m-status" name="status" class="field-input">
+              <option value="approved" selected>Approved</option>
+              <option value="contacted">Contacted</option>
+              <option value="pending">Pending</option>
+            </select>
+          </div>
+        </div>
+      </section>
+    </form>
+
+    <p class="field-error" id="madrasa-new-reg-error" role="alert" style="margin-top:4px;"></p>
+
+    <div class="modal-foot">
+      <span></span>
+      <div class="modal-actions">
+        <button type="button" class="btn-glass btn-glass--ghost" id="madrasa-new-reg-cancel">Cancel</button>
+        <button type="button" class="btn-glass btn-glass--solid-moss" id="madrasa-new-reg-preview">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+          Preview
+        </button>
+        <button type="button" class="btn-glass btn-glass--solid-gold" id="madrasa-new-reg-save">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z" />
+            <path d="M17 21v-8H7v8M7 3v5h8" />
+          </svg>
+          Save Record
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ─── MADRASA PREVIEW (certificate sheet, same compact dialog) ─────────── #}
+<div class="modal-overlay" id="madrasa-cert-preview-modal">
+  <div class="modal-glass" role="dialog" aria-modal="true" aria-labelledby="madrasa-cert-preview-title">
+    <button type="button" class="modal-close" id="madrasa-cert-preview-close" aria-label="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M18 6 6 18M6 6l12 12" />
+      </svg>
+    </button>
+    <h3 id="madrasa-cert-preview-title">Admission preview</h3>
+
+    <div id="madrasa-cert-preview-body"><!-- populated by JS --></div>
+
+    <div class="modal-foot" style="margin-top:20px;">
+      <button type="button" class="btn-glass btn-glass--ghost" id="madrasa-cert-back-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 12H5M12 19l-7-7 7-7" />
+        </svg>
+        Back to Edit
+      </button>
+      <p class="field-error" id="madrasa-cert-preview-error" role="alert"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn-glass btn-glass--solid-moss" id="madrasa-cert-print-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path
+              d="M6 9V3h12v6M6 18H4a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-2M6 14h12v7H6z" />
+          </svg>
+          Print
+        </button>
+        <button type="button" class="btn-glass btn-glass--submit" id="madrasa-cert-confirm-save-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round">
+            <path d="m22 2-7 20-4-9-9-4 20-7Z" />
+            <path d="M22 2 11 13" />
+          </svg>
+          Submit
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    'use strict';
+
+    // ---------- template-injected config ----------
+    var MOSQUE_NAME = {{ mosque_name | default ('Jama Masjid Vakola (Trust)') | tojson
+  }};
+  var MOSQUE_ADDRESS = {{ mosque_address | default ('Santacruz (E), Mumbai - 400055') | tojson }};
+  var SAVE_ENDPOINT = '/admin/registrations/madrasa/new';
+
+  var MADRASA_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5.5C4 4.67 4.67 4 5.5 4H12v16H5.5A1.5 1.5 0 0 1 4 18.5v-13Z"/><path d="M20 5.5c0-.83-.67-1.5-1.5-1.5H12v16h6.5a1.5 1.5 0 0 0 1.5-1.5v-13Z"/></svg>';
+
+  var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+  var csrfToken = csrfMeta ? csrfMeta.content : '';
+
+  var modal = document.getElementById('madrasa-reg-modal');
+  var certModal = document.getElementById('madrasa-cert-preview-modal');
+  var form = document.getElementById('form-madrasa-direct');
+  var errorEl = document.getElementById('madrasa-new-reg-error');
+  var certErrorEl = document.getElementById('madrasa-cert-preview-error');
+
+  // ---------- small helpers ----------
+  function txt(v) {
+    return (v === null || v === undefined) ? '' : String(v);
+  }
+
+  function escapeHtml(v) {
+    return txt(v).replace(/[&<>"']/g, function (c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+    });
+  }
+
+  // ---------- open / close ----------
+  function formIsDirty() {
+    return Array.prototype.some.call(form.elements, function (el) {
+      if (el.type === 'radio' || el.type === 'checkbox') return el.checked !== el.defaultChecked;
+      if (el.tagName === 'SELECT') return el.selectedIndex !== 0;
+      return txt(el.value).trim() !== '';
+    });
+  }
+
+  function openMadrasaReg() {
+    modal.classList.add('is-open');
+  }
+
+  function closeMadrasaReg() {
+    modal.classList.remove('is-open');
+    errorEl.textContent = '';
+  }
+
+  function requestCloseMadrasaReg() {
+    if (formIsDirty() && !window.confirm('Discard this registration? Anything you have typed will be lost.')) return;
+    closeMadrasaReg();
+  }
+
+  function closePreview() {
+    certModal.classList.remove('is-open');
+  }
+
+  // any element with data-open-madrasa-reg opens the dialog (delegated, so load order doesn't matter)
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest ? e.target.closest('[data-open-madrasa-reg]') : null;
+    if (t) openMadrasaReg();
+  });
+
+  window.MadrasaReg = { open: openMadrasaReg, close: requestCloseMadrasaReg };
+
+  document.getElementById('madrasa-new-reg-close').addEventListener('click', requestCloseMadrasaReg);
+  document.getElementById('madrasa-new-reg-cancel').addEventListener('click', requestCloseMadrasaReg);
+  // NOTE: deliberately no overlay-click-to-close — it would discard a half-filled form.
+
+  document.getElementById('madrasa-cert-preview-close').addEventListener('click', closePreview);
+  document.getElementById('madrasa-cert-back-btn').addEventListener('click', closePreview);
+
+  // close only the topmost open layer
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    if (certModal.classList.contains('is-open')) { closePreview(); return; }
+    if (modal.classList.contains('is-open')) requestCloseMadrasaReg();
+  });
+
+  form.addEventListener('submit', function (e) { e.preventDefault(); });
+
+  // ---------- form data ----------
+  function collectFormData() {
+    var data = {};
+    new FormData(form).forEach(function (value, key) { data[key] = value; });
+    return data;
+  }
+
+  function validateForm() {
+    if (!form.reportValidity()) {
+      errorEl.textContent = 'Fill the fields marked * to continue.';
+      return null;
+    }
+    errorEl.textContent = '';
+    return collectFormData();
+  }
+
+  // ---------- certificate preview ----------
+  function personCell(role, roleAr, name, age, address) {
+    var meta = [txt(age) ? ('Age ' + txt(age)) : '', txt(address)].filter(Boolean).join(' · ');
+    return '<tr><td class="cert-role"><span class="cert-role-ar">' + roleAr + '</span>' + role + '</td>' +
+      '<td>' +
+      (txt(name).trim()
+        ? '<div class="cert-person-name">' + escapeHtml(name) + '</div>'
+        : '<div class="cert-empty">Not provided</div>') +
+      (meta ? '<div class="cert-person-meta">' + escapeHtml(meta) + '</div>' : '') +
+      '</td></tr>';
+  }
+
+  function certHeader(titleAr, titleEn) {
+    return '<div class="cert-header">' +
+      '<p class="cert-bismillah">بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ</p>' +
+      '<p class="cert-title-ar">' + titleAr + '</p>' +
+      '<p class="cert-title-en">' + titleEn + '</p>' +
+      '<p class="cert-mosque-line"><span class="cert-mosque-name">' + escapeHtml(MOSQUE_NAME) + '</span>' +
+      (MOSQUE_ADDRESS ? ' · ' + escapeHtml(MOSQUE_ADDRESS) : '') + '</p>' +
+      '</div>';
+  }
+
+  function renderMadrasaCert(d) {
+    return '' +
+      '<div class="cert-sheet">' +
+      certHeader('داخلہ مدرسہ', 'MADRASA ADMISSION') +
+      '<table class="cert-table">' +
+      personCell('Child', 'طالب علم', d.child_name, d.child_age, '') +
+      personCell('Parent / Guardian', 'سرپرست', d.parent_name, '', d.contact) +
+      '</table>' +
+      '<p class="cert-footer-note">This is a system-generated preview of the admission record.</p>' +
+      '</div>';
+  }
+
+  function showPreview(data) {
+    certErrorEl.textContent = '';
+    document.getElementById('madrasa-cert-preview-body').innerHTML = renderMadrasaCert(data);
+    certModal.classList.add('is-open');
+  }
+
+  document.getElementById('madrasa-new-reg-preview').addEventListener('click', function () {
+    var data = validateForm();
+    if (data) showPreview(data);
+  });
+
+  // ---------- print (preview only) ----------
+  function endPrint() {
+    document.body.classList.remove('is-printing');
+    certModal.classList.remove('is-print-active');
+  }
+
+  function printPreview() {
+    endPrint();
+    certModal.classList.add('is-print-active');
+    document.body.classList.add('is-printing');
+    window.print();
+    // afterprint doesn't fire everywhere; clean up either way
+    window.setTimeout(endPrint, 1000);
+  }
+
+  window.addEventListener('afterprint', endPrint);
+  document.getElementById('madrasa-cert-print-btn').addEventListener('click', printPreview);
+
+  // ---------- table row for a freshly saved record ----------
+  function buildMadrasaRow(dbId, displayId, row) {
+    var tr = document.createElement('tr');
+    tr.className = 'reg-row is-new-row';
+
+    var primary = txt(row.child_name);
+    var secondary = 'Age ' + txt(row.child_age) + ' · Guardian: ' + txt(row.parent_name);
+    var contact = txt(row.madrasa_contact || row.contact);
+    var status = txt(row.status) || 'pending';
+
+    tr.dataset.id = txt(displayId);
+    tr.dataset.dbid = txt(dbId);
+    tr.dataset.type = 'madrasa';
+    tr.dataset.status = status;
+    tr.dataset.submitted = txt(row.submitted_at);
+    tr.dataset.search = (primary + ' ' + txt(row.parent_name) + ' ' + contact).toLowerCase();
+    tr.dataset.primary = primary;
+    tr.dataset.secondary = secondary;
+    tr.dataset.contact = contact;
+    tr.dataset.fieldChild = primary;
+    tr.dataset.fieldAge = txt(row.child_age);
+    tr.dataset.fieldParent = txt(row.parent_name);
+
+    tr.innerHTML =
+      '<td class="name-cell">' + escapeHtml(primary) + '<span class="sub">' + escapeHtml(secondary) + '</span></td>' +
+      '<td><span class="badge badge-madrasa">' + MADRASA_ICON + ' Madrasa</span></td>' +
+      '<td><span class="badge badge-' + escapeHtml(status) + ' status-badge">' +
+      escapeHtml(status.charAt(0).toUpperCase() + status.slice(1)) + '</span></td>' +
+      '<td class="timestamp-cell">' + escapeHtml(row.display_date) +
+      '<span class="sub">' + escapeHtml(row.display_time) + '</span></td>' +
+      '<td>' + escapeHtml(contact) + '</td>' +
+      '<td class="view-cell">View <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></td>';
+
+    return tr;
+  }
+
+  // ---------- save ----------
+  function saveMadrasa() {
+    var data = validateForm();
+    if (!data) return;
+
+    var saveBtn = document.getElementById('madrasa-new-reg-save');
+    var submitBtn = document.getElementById('madrasa-cert-confirm-save-btn');
+    var submitHtml = submitBtn.innerHTML;
+
+    [saveBtn, submitBtn].forEach(function (b) { b.disabled = true; });
+    submitBtn.textContent = 'Submitting…';
+    errorEl.textContent = '';
+    certErrorEl.textContent = '';
+
+    fetch(SAVE_ENDPOINT, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+      body: JSON.stringify(data)
+    })
+      .then(function (res) {
+        if (!res.ok) throw new Error('Request failed with ' + res.status);
+        return res.json();
+      })
+      .then(function (payload) {
+        var row = payload && payload.row;
+        var tr = null;
+        var tbody = document.getElementById('reg-table-body');
+        if (row && tbody) {
+          tr = buildMadrasaRow(row.db_id, row.id, row);
+          tbody.insertBefore(tr, tbody.firstChild);
+        }
+        form.reset();
+        closePreview();
+        closeMadrasaReg();
+        // host page re-counts stats, re-applies filters and wires the row's click handler
+        document.dispatchEvent(new CustomEvent('registrations:changed', { detail: { row: tr, type: 'madrasa' } }));
+      })
+      .catch(function (err) {
+        var msg = 'Could not save this registration — please check the details and try again.';
+        errorEl.textContent = msg;
+        certErrorEl.textContent = msg;
+        console.error(err);
+      })
+      .finally(function () {
+        [saveBtn, submitBtn].forEach(function (b) { b.disabled = false; });
+        submitBtn.innerHTML = submitHtml;
+      });
+  }
+
+  document.getElementById('madrasa-new-reg-save').addEventListener('click', saveMadrasa);
+  document.getElementById('madrasa-cert-confirm-save-btn').addEventListener('click', saveMadrasa);
+  }) ();
+</script>

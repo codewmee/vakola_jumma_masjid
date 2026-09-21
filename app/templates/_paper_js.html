@@ -1,0 +1,187 @@
+<script>
+/* NikahPaper.render(data) -> HTML string of the whole Nikah Nama.  NikahPaper.fit(root) -> shrink-to-fit pass.
+   Shared by the live preview and the PDF page, so both always match. */
+window.NikahPaper = (function () {
+  'use strict';
+
+  var REG_NO = 'B-191-1952-Bom.';
+  var TRUST_EN = 'Jama Masjid Vakola (Trust) Santacruz (E), Mumbai - 400055';
+  var TRUST_UR = 'جامع مسجد وکولہ (ٹرسٹ) سانتاکروز (ایسٹ) ممبئی ۴۰۰۰۵۵';
+
+  var URDU_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
+  var URDU_MONTHS = ['جنوری','فروری','مارچ','اپریل','مئی','جون','جولائی','اگست','ستمبر','اکتوبر','نومبر','دسمبر'];
+  var URDU_DAYS = ['اتوار','پیر','منگل','بدھ','جمعرات','جمعہ','ہفتہ'];
+
+  function txt(v) { return (v === null || v === undefined) ? '' : String(v); }
+  function esc(v) {
+    return txt(v).replace(/[&<>"']/g, function (c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+    });
+  }
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  function ud(v) { return txt(v).replace(/[0-9]/g, function (g) { return URDU_DIGITS.charAt(parseInt(g, 10)); }); }
+  function parseDay(iso) {
+    var s = txt(iso).trim(); if (!s) return null;
+    var d = new Date(s.slice(0, 10) + 'T00:00:00');
+    return isNaN(d.getTime()) ? null : d;
+  }
+  function timeBoth(t) {
+    var m = /^(\d{1,2}):(\d{2})/.exec(txt(t).trim());
+    if (!m) return { en: '', ur: '' };
+    var h = parseInt(m[1], 10), h12 = (h % 12 === 0) ? 12 : (h % 12);
+    var part = h < 12 ? 'صبح' : (h < 17 ? 'دوپہر' : 'شام');
+    return { en: h12 + ':' + m[2] + ' ' + (h < 12 ? 'AM' : 'PM'), ur: ud(h12 + ':' + m[2]) + ' ' + part };
+  }
+
+  // two-line value box (English over Urdu) inside a labelled group
+  function stack(en, ur, fs) {
+    var e = txt(en).trim(), u = txt(ur).trim();
+    return '<div class="v nk-fit" data-fs="' + fs + '">' +
+      (e ? '<span>' + esc(e) + '</span>' : '') +
+      (u ? '<span class="ur">' + esc(u) + '</span>' : '') + '</div>';
+  }
+  function single(text, fs, extra) {
+    return '<div class="v big nk-fit ' + (extra || '') + '" data-fs="' + fs + '">' + esc(text) + '</div>';
+  }
+  function grp(valueHtml, urLabel) {
+    return '<div class="c"><div class="grp">' + valueHtml + '<span class="lb">' + urLabel + '</span></div></div>';
+  }
+
+  function col(kind, main, sub, solo) {
+    var m = txt(main).trim(), s = txt(sub).trim();
+    if (!m && !s) return '';
+    return '<div class="col ' + kind + (solo ? ' solo' : '') + '">' +
+      (m ? '<b>' + esc(m) + '</b>' : '') + (s ? '<span>' + esc(s) + '</span>' : '') + '</div>';
+  }
+  function pair(fs, name, nameUr, enSub, urSub) {
+    var hasUr = txt(nameUr).trim() || txt(urSub).trim();
+    return '<div class="c val nk-fit" data-fs="' + fs + '">' +
+      col('en', name, enSub, !hasUr) + (hasUr ? col('ur', nameUr, urSub) : '') + '</div>';
+  }
+  function person(name, nameUr, age, addr, addrUr) {
+    var a = txt(age).trim();
+    var enSub = [a ? ('Age ' + a) : '', txt(addr).trim()].filter(Boolean).join(' · ');
+    var urSub = [a ? ('عمر ' + ud(a) + ' سال') : '', txt(addrUr).trim()].filter(Boolean).join(' · ');
+    return pair(1.45, name, nameUr, enSub, urSub);
+  }
+  function lab(ur, en) {
+    return '<div class="c lab"><span class="ur">' + ur + '</span><span class="en">' + en + '<br>Age &amp; Address</span></div>';
+  }
+  function prow(urLabel, enLabel, valueHtml) {
+    return '<div class="r p"><div class="c sig"><i></i></div>' + valueHtml + lab(urLabel, enLabel) + '</div>';
+  }
+  function ck(on) { return '<i class="ck' + (on ? ' on' : '') + '"></i>'; }
+
+  function qline(label, inner, cls, fs) {
+    return '<div class="qline"><span class="l">' + label + '</span>' +
+      '<div class="v2 nk-fit ' + (cls || '') + '" data-fs="' + fs + '">' + inner + '</div></div>';
+  }
+
+  function render(d) {
+    d = d || {};
+    var dt = parseDay(d.nikah_date);
+    var numDate = dt ? pad2(dt.getDate()) + '/' + pad2(dt.getMonth() + 1) + '/' + dt.getFullYear() : '';
+    var urDate = dt ? ud(dt.getDate()) + ' ' + URDU_MONTHS[dt.getMonth()] + ' ' + ud(dt.getFullYear()) : '';
+    var enDay = dt ? dt.toLocaleDateString('en-US', { weekday: 'long' }) : '';
+    var urDay = dt ? URDU_DAYS[dt.getDay()] : '';
+    var tm = timeBoth(d.nikah_time);
+
+    var rawAmt = txt(d.maher_amount).trim();
+    var n = Number(rawAmt.replace(/,/g, ''));
+    var amount = rawAmt === '' ? '0' : (isFinite(n) ? n.toLocaleString('en-IN') : rawAmt);
+    var promptOn = d.dower_type !== 'deferred';
+
+    var head =
+      '<div class="r nk-head">' +
+        '<svg viewBox="0 0 90.8 23" preserveAspectRatio="none" aria-hidden="true">' +
+          '<path d="M0 23V17C0 8 20 2.5 45.4 2.5S90.8 8 90.8 17V23" fill="none" stroke="#1f6b35" stroke-width=".3"/></svg>' +
+        '<div class="bis" lang="ur">بسم اللہ الرحمن الرحیم</div>' +
+        '<div class="vl" lang="ar">فمن رغب عن سنتی فلیس منی</div>' +
+        '<div class="vr" lang="ar">النکاح من سنتی</div>' +
+        '<div class="t-ur" lang="ur">سند نکاح</div>' +
+        '<div class="t-en">NIKAH NAMA</div>' +
+      '</div>';
+
+    var reg =
+      '<div class="r reg">' +
+        '<div class="c"><span><span class="ur">رجسٹریشن نمبر</span> <b>' + esc(REG_NO) + '</b></span></div>' +
+        '<div class="c"><span class="ur">' + TRUST_UR + '</span><b>' + esc(TRUST_EN) + '</b></div>' +
+      '</div>';
+
+    var numbers =
+      '<div class="r two">' +
+        grp(single(d.jild_no, 2, ''), 'جلد نمبر') +
+        grp(single(d.sanad_no, 2, ''), 'سند نمبر') +
+      '</div>';
+
+    var when =
+      '<div class="r date">' +
+        grp(stack(tm.en, tm.ur, 1.3), 'وقت') +
+        grp(stack(enDay, urDay, 1.4), 'بروز') +
+        grp(stack(numDate, urDate, 1.4), 'تاریخ') +
+      '</div>';
+
+    var loc =
+      '<div class="r p">' +
+        '<div class="c sig head"><span class="ur">دستخط یا انگوٹھا</span><span class="en">Signature or thumb</span></div>' +
+        pair(1.5, d.nikah_location, d.nikah_location_ur, '', '') +
+        '<div class="c lab"><span class="ur">مقام نکاح</span></div>' +
+      '</div>';
+
+    var people =
+      prow('اسم ناکح مع ولدیت عمر و پتہ', 'Full Name of Groom',
+        person(d.groom_name, d.groom_name_ur, d.groom_age, d.groom_address, d.groom_address_ur)) +
+      prow('اسم منکوحہ مع ولدیت عمر و پتہ', 'Full Name of Bride',
+        person(d.bride_name, d.bride_name_ur, d.bride_age, d.bride_address, d.bride_address_ur)) +
+      prow('وکیل کا نام ولدیت عمر و پتہ', 'Full Name of Vakil',
+        person(d.vakil_name, d.vakil_name_ur, d.vakil_age, d.vakil_address, d.vakil_address_ur)) +
+      prow('گواہ اول کا نام ولدیت عمر و پتہ', 'Full Name of Witness 1',
+        person(d.witness1_name, d.witness1_name_ur, d.witness1_age, d.witness1_address, d.witness1_address_ur)) +
+      prow('گواہ دوم کا نام ولدیت عمر و پتہ', 'Full Name of Witness 2',
+        person(d.witness2_name, d.witness2_name_ur, d.witness2_age, d.witness2_address, d.witness2_address_ur));
+
+    var maher =
+      '<div class="r p">' +
+        '<div class="c mv"><span class="rs">₹</span><div class="v nk-fit" data-fs="1.9">' + esc(amount) + '</div></div>' +
+        '<div class="c mm"><span>AMOUNT OF MAHER</span>' +
+          '<label>' + ck(!promptOn) + 'DEFERRED DOWER</label><label>' + ck(promptOn) + 'PROMPT DOWER</label></div>' +
+        '<div class="c mu"><span class="ur">مہر کی قسم و مقدار</span>' +
+          '<div class="cks"><label>' + ck(!promptOn) + '<span class="ur">مؤجل</span></label>' +
+          '<label>' + ck(promptOn) + '<span class="ur">معجل</span></label></div></div>' +
+      '</div>';
+
+    function bi(en, ur) {
+      var e = txt(en).trim(), u = txt(ur).trim();
+      return (e ? '<span>' + esc(e) + '</span>' : '<span></span>') + (u ? '<span class="ur">' + esc(u) + '</span>' : '');
+    }
+    var qazi =
+      '<div class="r p">' +
+        '<div class="c stamp"><div class="stbox"><span>Stamp</span><span class="ur">مہر</span></div></div>' +
+        '<div class="c qm">' +
+          qline('Full Name of Qazi', bi(d.qazi_name, d.qazi_name_ur), '', 1.4) +
+          qline('Address', bi(d.qazi_address, d.qazi_address_ur), '', 1.3) +
+          qline('Signature', esc(d.qazi_signature), 'sign', 2.1) +
+        '</div>' +
+        '<div class="c qu"><span class="ur">قاضی کا نام</span><span class="ur">پتہ</span><span class="ur">قاضی کے دستخط</span></div>' +
+      '</div>';
+
+    return '<div class="nk-paper"><div class="nk-frame"></div><div class="nk-body">' +
+      head + reg + numbers + when + loc + people + maher + qazi + '</div></div>';
+  }
+
+  // shrink any box whose text does not fit, in small steps
+  function fit(root) {
+    Array.prototype.forEach.call(root.querySelectorAll('.nk-fit'), function (el) {
+      var fs = parseFloat(el.getAttribute('data-fs')) || 1.5, min = fs * 0.55, guard = 0;
+      el.style.setProperty('--fs', fs);
+      while (guard++ < 60 && fs > min &&
+        (el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1)) {
+        fs = Math.round((fs - 0.05) * 100) / 100;
+        el.style.setProperty('--fs', fs);
+      }
+    });
+  }
+
+  return { render: render, fit: fit };
+})();
+</script>

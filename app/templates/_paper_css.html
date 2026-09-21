@@ -1,0 +1,495 @@
+<style>
+    /* NIKAH NAMA PAPER — shared by the live preview (nikha_modal.html) and the PDF page
+   (print/nikah_certificate.html). Everything is sized in cqw (1% of paper width), so the
+   paper looks identical at any screen size and at 194mm on A4. Do not auto-format Jinja files. */
+    .nk-paper {
+        --g: #1f6b35;
+        --navy: #1b2f5c;
+        --ln: .28cqw solid var(--g);
+        --soft: .2cqw solid #b7cbbb;
+        position: relative;
+        flex: none;
+        width: min(100%, calc(var(--pv-h, 100vh)*.69039));
+        aspect-ratio: 194/281;
+        container-type: inline-size;
+        background: #fff;
+        color: #0c1d12;
+        font-family: 'Outfit', sans-serif;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, .45);
+        overflow: hidden
+    }
+
+    .nk-paper * {
+        box-sizing: border-box
+    }
+
+    .nk-paper .ur,
+    .nk-paper .col.ur {
+        font-family: 'Noto Nastaliq Urdu', 'Scheherazade New', serif;
+        font-weight: 500;
+        line-height: 1.9;
+        direction: rtl
+    }
+
+    /* ornamental frame */
+    .nk-frame {
+        position: absolute;
+        inset: 1cqw;
+        border: .3cqw solid var(--g);
+        background:
+            radial-gradient(circle at 50% 50%, var(--g) 0 .45cqw, transparent .5cqw) 0 0/2.4cqw 2.4cqw round,
+            radial-gradient(circle at 50% 50%, transparent 0 .75cqw, var(--g) .8cqw .95cqw, transparent 1cqw) 0 0/2.4cqw 2.4cqw round
+    }
+
+    .nk-frame::after {
+        content: "";
+        position: absolute;
+        inset: 2.4cqw;
+        background: #fff;
+        border: .3cqw solid var(--g)
+    }
+
+    /* body grid */
+    .nk-body {
+        position: absolute;
+        inset: 4.6cqw;
+        display: grid;
+        border: var(--ln);
+        background: #fff;
+        grid-template-rows: 23cqw 6.5cqw 6cqw 6cqw 6.5cqw repeat(5, 13cqw) 8cqw 1fr
+    }
+
+    .nk-body>.r {
+        display: grid;
+        min-height: 0;
+        border-top: var(--ln)
+    }
+
+    .nk-body>.nk-head {
+        border-top: 0
+    }
+
+    .r.p {
+        grid-template-columns: 18% 53% 29%
+    }
+
+    .c {
+        min-width: 0;
+        min-height: 0;
+        border-left: var(--ln);
+        display: flex;
+        align-items: center
+    }
+
+    .c:first-child {
+        border-left: 0
+    }
+
+    /* header */
+    .nk-head {
+        position: relative
+    }
+
+    .nk-head svg {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%
+    }
+
+    .nk-head .bis {
+        position: absolute;
+        top: 3.4cqw;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font: 600 1.7cqw 'Scheherazade New', serif;
+        color: var(--navy)
+    }
+
+    .nk-head .t-ur {
+        position: absolute;
+        top: 5.4cqw;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font: 500 7.2cqw/1.5 'Noto Nastaliq Urdu', serif;
+        color: var(--g)
+    }
+
+    .nk-head .t-en {
+        position: absolute;
+        bottom: .8cqw;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font: 900 3.6cqw 'Cinzel', serif;
+        letter-spacing: .06em;
+        color: var(--g)
+    }
+
+    .nk-head .vl,
+    .nk-head .vr {
+        position: absolute;
+        font: 600 2.3cqw 'Scheherazade New', serif;
+        color: var(--navy);
+        white-space: nowrap
+    }
+
+    .nk-head .vl {
+        left: 2.4cqw;
+        top: 11cqw;
+        transform: rotate(-12deg);
+        transform-origin: left center
+    }
+
+    .nk-head .vr {
+        right: 2.4cqw;
+        top: 8cqw;
+        font-size: 3cqw;
+        transform: rotate(12deg);
+        transform-origin: right center
+    }
+
+    /* registration band */
+    .r.reg {
+        grid-template-columns: 38% 62%
+    }
+
+    .r.reg .c {
+        justify-content: center;
+        flex-direction: column;
+        gap: .2cqw;
+        text-align: center;
+        font-size: 1.25cqw
+    }
+
+    .r.reg .ur {
+        font-size: 1.7cqw;
+        line-height: 1.7
+    }
+
+    .r.reg b {
+        font-weight: 600
+    }
+
+    /* value boxes (number / date / day / time) */
+    .r.two {
+        grid-template-columns: 1fr 1fr
+    }
+
+    .r.date {
+        grid-template-columns: 25% 33% 42%
+    }
+
+    .grp {
+        display: flex;
+        align-items: center;
+        gap: 1cqw;
+        padding: 0 1.6cqw;
+        height: 100%
+    }
+
+    .grp .v {
+        flex: 1;
+        height: 76%;
+        min-width: 0;
+        border: var(--soft);
+        border-radius: .6cqw;
+        background: #fbfdfb;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+        white-space: nowrap;
+        font-weight: 600
+    }
+
+    .grp .lb {
+        font-family: 'Noto Nastaliq Urdu', serif;
+        color: var(--g);
+        font-size: 2cqw;
+        line-height: 1.8;
+        white-space: nowrap
+    }
+
+    .grp .v.big {
+        font-size: 2cqw
+    }
+
+    /* label + value + signature cells */
+    .nk-fit {
+        font-size: calc(var(--fs, 1.5)*1cqw)
+    }
+
+    .c.lab {
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        gap: .5cqw;
+        padding: .6cqw
+    }
+
+    .c.lab .ur {
+        color: var(--g);
+        font-size: 1.9cqw;
+        line-height: 1.7
+    }
+
+    .c.lab .en {
+        font-size: 1.15cqw;
+        line-height: 1.5;
+        color: #26402f
+    }
+
+    .c.sig {
+        justify-content: center;
+        padding: 1cqw
+    }
+
+    .c.sig i {
+        display: block;
+        width: 100%;
+        height: 100%;
+        border: var(--soft);
+        border-radius: .8cqw
+    }
+
+    .c.sig.head {
+        flex-direction: column;
+        justify-content: center;
+        text-align: center;
+        gap: .4cqw
+    }
+
+    .c.sig.head .ur {
+        color: var(--g);
+        font-size: 1.6cqw;
+        line-height: 1.7
+    }
+
+    .c.sig.head .en {
+        font-size: 1.05cqw;
+        color: #26402f
+    }
+
+    .c.val {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.4cqw;
+        align-items: center;
+        padding: .8cqw 1.4cqw;
+        overflow: hidden
+    }
+
+    .c.val .col {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        overflow-wrap: anywhere
+    }
+
+    .c.val .col.solo {
+        grid-column: 1/-1
+    }
+
+    .c.val .col.en {
+        text-align: left;
+        direction: ltr
+    }
+
+    .c.val .col.ur {
+        text-align: right
+    }
+
+    .c.val .col b {
+        font-weight: 600
+    }
+
+    .c.val .col span {
+        font-size: .93em;
+        color: #1f3226
+    }
+
+    /* maher */
+    .ck {
+        display: inline-block;
+        flex: none;
+        position: relative;
+        width: 1.7cqw;
+        height: 1.7cqw;
+        border: .2cqw solid var(--g);
+        border-radius: .3cqw;
+        background: #fff
+    }
+
+    .ck.on::after {
+        content: "";
+        position: absolute;
+        inset: -.5cqw;
+        background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2317722f' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 12.5l5 5L20 6.5'/%3E%3C/svg%3E") center/contain no-repeat
+    }
+
+    .c.mv {
+        justify-content: center;
+        gap: .8cqw;
+        padding: 0 1.2cqw
+    }
+
+    .c.mv .rs {
+        font-size: 2.2cqw;
+        color: var(--g)
+    }
+
+    .c.mv .v {
+        flex: 1;
+        height: 70%;
+        border: var(--soft);
+        border-radius: .6cqw;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        overflow: hidden;
+        white-space: nowrap
+    }
+
+    .c.mm {
+        gap: 1.6cqw;
+        padding: 0 1.6cqw;
+        font-size: 1.15cqw;
+        color: #26402f;
+        flex-wrap: wrap;
+        justify-content: center
+    }
+
+    .c.mm label {
+        display: inline-flex;
+        align-items: center;
+        gap: .6cqw;
+        white-space: nowrap
+    }
+
+    .c.mu {
+        flex-direction: column;
+        justify-content: center;
+        gap: .3cqw
+    }
+
+    .c.mu .ur {
+        color: var(--g);
+        font-size: 1.9cqw;
+        line-height: 1.6
+    }
+
+    .c.mu .cks {
+        display: flex;
+        gap: 2cqw;
+        direction: ltr;
+        font-size: 1.5cqw
+    }
+
+    .c.mu .cks label {
+        display: inline-flex;
+        align-items: center;
+        gap: .5cqw
+    }
+
+    /* qazi */
+    .c.stamp {
+        justify-content: center;
+        padding: 1cqw
+    }
+
+    .stbox {
+        width: 100%;
+        height: 100%;
+        border: .2cqw dashed #8ba593;
+        border-radius: .8cqw;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.15cqw;
+        color: #5a6f60
+    }
+
+    .stbox .ur {
+        font-size: 1.6cqw;
+        color: var(--g)
+    }
+
+    .c.qm {
+        flex-direction: column;
+        padding: .6cqw 1.6cqw
+    }
+
+    .qline {
+        flex: 1;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 1.4cqw;
+        min-height: 0
+    }
+
+    .qline .l {
+        flex: none;
+        width: 13cqw;
+        font-size: 1.15cqw;
+        color: #26402f
+    }
+
+    .qline .v2 {
+        flex: 1;
+        height: 72%;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1cqw;
+        border-bottom: .2cqw solid #8ba593;
+        padding: 0 .6cqw;
+        overflow: hidden;
+        white-space: nowrap;
+        font-weight: 500
+    }
+
+    .qline .v2.sign {
+        border: var(--soft);
+        border-radius: .6cqw;
+        font-family: 'EB Garamond', serif;
+        font-style: italic;
+        justify-content: flex-start
+    }
+
+    .c.qu {
+        flex-direction: column;
+        padding: .6cqw 2cqw;
+        align-items: stretch
+    }
+
+    .c.qu span {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        color: var(--g);
+        font-size: 1.9cqw
+    }
+
+    /* print: exact A4 printable area (A4 minus 8mm margins) */
+    @media print {
+        .nk-paper {
+            box-shadow: none
+        }
+
+        .nk-paper,
+        .nk-paper * {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact
+        }
+    }
+</style>

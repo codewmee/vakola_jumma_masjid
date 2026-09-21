@@ -1,0 +1,42 @@
+{# ─── admin_components/_macros.html ─────────────────────────────────────────
+Shared Jinja macros. Import with:
+{% from "admin_components/_macros.html" import person_fields %}
+The macro uses no template context, so a plain `import` is enough. ─── #}
+
+{# person fields used by the Nikah form:
+name (EN) | name (UR) | age, then address (EN) | address (UR)
+key → prefix for ids and names: n-{key}-name, {key}_name, {key}_name_ur, {key}_age, {key}_address, {key}_address_ur
+required → marks the English name as required (groom, bride) #}
+{% macro person_fields(key, required=false) %}
+<div class="fg fg-person">
+    <div>
+        <label class="field-label" for="n-{{ key }}-name"><span>Full name (English){% if required %}<i
+                    class="req">*</i>{%
+                endif %}</span></label>
+        <input id="n-{{ key }}-name" name="{{ key }}_name" type="text" maxlength="120" class="field-input"
+            autocomplete="off" {% if required %}required{% endif %}>
+    </div>
+    <div>
+        <label class="field-label ur-label" for="n-{{ key }}-name-ur">مکمل نام (اردو)</label>
+        <input id="n-{{ key }}-name-ur" name="{{ key }}_name_ur" type="text" maxlength="120"
+            class="field-input field-ur" dir="rtl" lang="ur" autocomplete="off">
+    </div>
+    <div>
+        <label class="field-label" for="n-{{ key }}-age"><span>Age</span></label>
+        <input id="n-{{ key }}-age" name="{{ key }}_age" type="number" inputmode="numeric" min="18" max="120"
+            class="field-input">
+    </div>
+</div>
+<div class="fg fg-2">
+    <div>
+        <label class="field-label" for="n-{{ key }}-address"><span>Address (English)</span></label>
+        <textarea id="n-{{ key }}-address" name="{{ key }}_address" rows="2" maxlength="240"
+            class="field-input"></textarea>
+    </div>
+    <div>
+        <label class="field-label ur-label" for="n-{{ key }}-address-ur">پتہ (اردو)</label>
+        <textarea id="n-{{ key }}-address-ur" name="{{ key }}_address_ur" rows="2" maxlength="240"
+            class="field-input field-ur" dir="rtl" lang="ur"></textarea>
+    </div>
+</div>
+{% endmacro %}

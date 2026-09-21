@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Nikah Nama — {{ data.sanad_no or '' }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=EB+Garamond:ital,wght@1,500&family=Noto+Nastaliq+Urdu:wght@400;500;600&family=Scheherazade+New:wght@500;600&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
+{% include "nikah/_paper_css.html" %}
+<style>
+  @page { size: A4; margin: 8mm; }
+  html, body { margin: 0; padding: 0; background: #fff; }
+  /* A4 minus 8mm margins = 194 x 281mm; 280.5 keeps it safely on one page */
+  .nk-paper { width: 194mm; height: 280.5mm; aspect-ratio: auto; box-shadow: none; }
+</style>
+</head>
+<body>
+<div id="cert-root"></div>
+<script id="cert-data" type="application/json">{{ data | tojson }}</script>
+{% include "nikah/_paper_js.html" %}
+<script>
+(function () {
+  var d = JSON.parse(document.getElementById('cert-data').textContent);
+  var root = document.getElementById('cert-root');
+  root.innerHTML = NikahPaper.render(d);
+  NikahPaper.fit(root);
+  var done = function () { NikahPaper.fit(root); document.body.setAttribute('data-ready', '1'); };
+  if (document.fonts && document.fonts.ready) { document.fonts.ready.then(done); } else { done(); }
+})();
+</script>
+</body>
+</html>

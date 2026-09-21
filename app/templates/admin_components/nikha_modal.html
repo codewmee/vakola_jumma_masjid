@@ -1,0 +1,1952 @@
+{% from "admin_components/_macros.html" import person_fields %}
+
+{# ─── NIKAH REGISTRATION (workspace + certificate preview) — self-contained ────────
+Holds its own CSS and JS. All element ids are prefixed `nikah-` so it can sit
+alongside madrasa_modal.html with no id collisions.
+
+Needs from the host page:
+• :root vars (--moss-*, --gold-*, --line, --ink, --paper, --danger, --radius,
+--shadow-soft, --nikah-bg, --nikah, --madrasa, --status-approved)
+• .modal-overlay base, .btn-glass* buttons, @keyframes modal-in
+•
+<meta name="csrf-token">, fonts (Cinzel, Outfit, Noto Nastaliq Urdu,
+Scheherazade New, EB Garamond)
+• #reg-table-body (new rows are inserted here)
+
+Open it with any element carrying data-open-nikah-reg (or NikahReg.open()).
+After a save it fires document 'registrations:changed' with detail {row, type}. ─── #}
+
+<style>
+  /* ---------- overlays: both nikah layers use the whole viewport ---------- */
+  #nikah-reg-modal.modal-overlay,
+  #nikah-cert-preview-modal.modal-overlay {
+    padding: 0;
+    background: var(--paper);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  /* the certificate preview sits on top of the registration workspace */
+  #nikah-cert-preview-modal {
+    z-index: 90;
+  }
+
+  .nr-shell .modal-actions,
+  .pv-bar .modal-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  /* =====================================================================
+     NIKAH REGISTRATION WORKSPACE
+     header / [section nav | scrolling form] / sticky footer
+     ===================================================================== */
+  .nr-shell {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: var(--paper);
+    animation: modal-in .2s ease;
+  }
+
+  .nr-head {
+    display: flex;
+    align-items: flex-end;
+    gap: 20px;
+    flex-wrap: wrap;
+    padding: 16px 28px 0;
+    background: #fff;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .nr-head-title {
+    flex: 1 1 280px;
+    padding-bottom: 12px;
+  }
+
+  .nr-head-title h3 {
+    font-size: 1.25rem;
+    color: var(--moss-700);
+  }
+
+  .nr-head-title p {
+    margin: 3px 0 0;
+    font-size: 0.8rem;
+    color: var(--moss-500);
+    max-width: 62ch;
+  }
+
+  .nr-close {
+    all: unset;
+    cursor: pointer;
+    width: 38px;
+    height: 38px;
+    margin-bottom: 10px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--moss-600);
+    border: 1px solid var(--line);
+    background: #fff;
+  }
+
+  .nr-close:hover {
+    background: var(--moss-50);
+  }
+
+  .nr-close:focus-visible {
+    outline: 2px solid var(--gold-400);
+    outline-offset: 2px;
+  }
+
+  .nr-close svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .nr-body {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 250px minmax(0, 1fr);
+  }
+
+  /* left rail: jump between sections, tick when a section is complete */
+  .nr-nav {
+    overflow-y: auto;
+    padding: 22px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background: rgba(255, 255, 255, 0.55);
+    border-right: 1px solid var(--line);
+  }
+
+  .nr-nav button {
+    all: unset;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 11px;
+    font-size: 0.9rem;
+    color: var(--moss-600);
+    transition: background .15s ease;
+  }
+
+  .nr-nav button:hover {
+    background: rgba(255, 255, 255, 0.8);
+  }
+
+  .nr-nav button:focus-visible {
+    outline: 2px solid var(--gold-400);
+    outline-offset: 1px;
+  }
+
+  .nr-nav button.is-current {
+    background: #fff;
+    color: var(--moss-700);
+    font-weight: 500;
+    box-shadow: var(--shadow-soft);
+  }
+
+  .nr-dot {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--moss-500);
+    background: #fff;
+    border: 1.5px solid var(--line);
+  }
+
+  .nr-dot::before {
+    content: attr(data-n);
+  }
+
+  .nr-nav button.is-current .nr-dot {
+    border-color: var(--gold-500);
+    color: var(--gold-600);
+  }
+
+  .nr-nav button.is-done .nr-dot {
+    background: var(--madrasa);
+    border-color: var(--madrasa);
+    color: #fff;
+  }
+
+  .nr-nav button.is-done .nr-dot::before {
+    content: '✓';
+  }
+
+  .nr-nav .nr-nav-ur {
+    margin-left: auto;
+    font-family: 'Noto Nastaliq Urdu', 'Scheherazade New', serif;
+    font-size: 0.82rem;
+    color: var(--gold-600);
+    line-height: 1.8;
+  }
+
+  .nr-scroll {
+    overflow-y: auto;
+    position: relative;
+    scroll-behavior: smooth;
+    padding: 26px clamp(16px, 4vw, 48px) 80px;
+  }
+
+  .nr-content {
+    max-width: 980px;
+    margin: 0 auto;
+  }
+
+  @media (max-width:900px) {
+    .nr-body {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .nr-nav {
+      flex-direction: row;
+      overflow-x: auto;
+      overflow-y: hidden;
+      flex: none;
+      padding: 10px 14px;
+      border-right: 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .nr-nav button {
+      white-space: nowrap;
+      flex: none;
+    }
+
+    .nr-nav .nr-nav-ur {
+      display: none;
+    }
+
+    .nr-scroll {
+      flex: 1;
+      min-height: 0;
+    }
+
+    .nr-head {
+      padding: 14px 16px 0;
+    }
+  }
+
+  /* section cards */
+  .nr-sec {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 22px 26px 26px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-soft);
+    scroll-margin-top: 14px;
+  }
+
+  @media (max-width:640px) {
+    .nr-sec {
+      padding: 18px 16px 20px;
+    }
+  }
+
+  .nr-sec-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+
+  .nr-sec-head h4 {
+    font-size: 1.05rem;
+    color: var(--moss-700);
+  }
+
+  .nr-sec-head .title-ur {
+    font-family: 'Noto Nastaliq Urdu', 'Scheherazade New', serif;
+    font-size: 1.05rem;
+    color: var(--gold-600);
+    line-height: 1.8;
+  }
+
+  .nr-tag {
+    margin-left: auto;
+    font-size: 0.7rem;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--moss-50);
+    color: var(--moss-500);
+  }
+
+  .nr-tag.req {
+    background: var(--nikah-bg);
+    color: var(--nikah);
+  }
+
+  .nr-hint {
+    margin: 0 0 18px;
+    font-size: 0.8rem;
+    color: var(--moss-500);
+  }
+
+  .nr-sub {
+    padding: 16px 0 0;
+    margin-top: 16px;
+    border-top: 1px dashed var(--line);
+  }
+
+  .nr-sub:first-of-type {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .nr-sub-title {
+    margin: 0 0 12px;
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: var(--moss-600);
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .nr-sub-title .title-ur {
+    font-family: 'Noto Nastaliq Urdu', 'Scheherazade New', serif;
+    font-weight: 500;
+    color: var(--gold-600);
+    line-height: 1.8;
+  }
+
+  /* grids — minmax(0,…) stops number/date inputs pushing a column past the card */
+  .fg {
+    display: grid;
+    gap: 16px 18px;
+  }
+
+  .fg+.fg {
+    margin-top: 16px;
+  }
+
+  .fg>* {
+    min-width: 0;
+  }
+
+  .fg-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .fg-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .fg-person {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 110px;
+  }
+
+  @media (max-width:760px) {
+
+    .fg-2,
+    .fg-3,
+    .fg-person {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  /* fields */
+  .field-label {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--moss-600);
+    margin: 0 0 6px;
+  }
+
+  .field-label .req {
+    color: var(--danger);
+    font-style: normal;
+    margin-left: 2px;
+  }
+
+  .field-label .lbl-ur {
+    font-family: 'Noto Nastaliq Urdu', 'Scheherazade New', serif;
+    font-weight: 400;
+    font-size: 0.86rem;
+    color: var(--gold-600);
+  }
+
+  .field-label.ur-label {
+    font-family: 'Noto Nastaliq Urdu', 'Scheherazade New', serif;
+    font-size: 0.92rem;
+    justify-content: flex-end;
+    line-height: 1.8;
+  }
+
+  .field-input,
+  textarea.field-input,
+  select.field-input {
+    display: block;
+    width: 100%;
+    min-height: 46px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.95rem;
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    padding: 11px 14px;
+    background: #fdfdfb;
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+
+  textarea.field-input {
+    min-height: 76px;
+    line-height: 1.5;
+    resize: vertical;
+  }
+
+  .field-input:hover {
+    border-color: var(--moss-400);
+  }
+
+  .field-input:focus {
+    outline: none;
+    border-color: var(--gold-500);
+    box-shadow: 0 0 0 3px rgba(201, 151, 58, 0.22);
+  }
+
+  .field-input:user-invalid {
+    border-color: #c46a4a;
+    background: #fff6f3;
+  }
+
+  .field-input[readonly] {
+    background: var(--moss-50);
+    color: var(--moss-600);
+    cursor: default;
+  }
+
+  .field-input.field-ur {
+    font-family: 'Noto Nastaliq Urdu', 'Scheherazade New', serif;
+    font-size: 1.1rem;
+    line-height: 2;
+    text-align: right;
+    direction: rtl;
+    padding: 7px 14px;
+  }
+
+  textarea.field-input.field-ur {
+    line-height: 2;
+  }
+
+  .field-error {
+    font-size: 0.78rem;
+    color: var(--danger);
+    min-height: 14px;
+    margin: 0;
+  }
+
+  /* prompt / deferred toggle */
+  .seg {
+    display: inline-flex;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fdfdfb;
+    max-width: 100%;
+  }
+
+  .seg label {
+    position: relative;
+    cursor: pointer;
+  }
+
+  .seg input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .seg span {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 12px 20px;
+    font-size: 0.92rem;
+    color: var(--moss-600);
+    transition: background .15s ease, color .15s ease;
+  }
+
+  .seg em {
+    font-style: normal;
+    font-family: 'Noto Nastaliq Urdu', 'Scheherazade New', serif;
+    font-size: 1rem;
+  }
+
+  .seg label+label span {
+    border-left: 1px solid var(--line);
+  }
+
+  .seg input:checked+span {
+    background: var(--moss-600);
+    color: #fff;
+  }
+
+  .seg input:focus-visible+span {
+    outline: 2px solid var(--gold-400);
+    outline-offset: -3px;
+  }
+
+  .money {
+    position: relative;
+  }
+
+  .money b {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-weight: 500;
+    color: var(--moss-500);
+  }
+
+  .money .field-input {
+    padding-left: 34px;
+  }
+
+  /* sticky footer */
+  .nr-foot {
+    display: flex;
+    align-items: center;
+    gap: 12px 16px;
+    flex-wrap: wrap;
+    padding: 12px 28px;
+    background: #fff;
+    border-top: 1px solid var(--line);
+    box-shadow: 0 -6px 20px rgba(46, 52, 41, 0.06);
+  }
+
+  .nr-foot-msg {
+    flex: 1 1 200px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .urdu-status {
+    font-size: 0.76rem;
+    color: var(--moss-500);
+  }
+
+  .urdu-status.is-error {
+    color: var(--danger);
+  }
+
+  .nr-progress {
+    font-size: 0.78rem;
+    color: var(--moss-500);
+    white-space: nowrap;
+  }
+
+  .nr-progress.is-complete {
+    color: var(--status-approved);
+  }
+
+  @media (max-width:640px) {
+    .nr-foot {
+      padding: 10px 16px;
+    }
+  }
+
+  /* =====================================================================
+     PREVIEW WORKSPACE — fills the screen, no scrolling for the Nikah Nama
+     ===================================================================== */
+  .pv-shell {
+    --pv-h: calc(100vh - 92px);
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: #2b3127;
+    animation: modal-in .2s ease;
+  }
+
+  @supports (height: 100dvh) {
+    .pv-shell {
+      --pv-h: calc(100dvh - 92px);
+    }
+  }
+
+  .pv-close {
+    all: unset;
+    cursor: pointer;
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(46, 52, 41, 0.12);
+    color: var(--moss-600);
+    backdrop-filter: blur(6px);
+    z-index: 2;
+  }
+
+  .pv-close svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .pv-close:hover {
+    background: rgba(255, 255, 255, 0.85);
+  }
+
+  .pv-close:focus-visible {
+    outline: 2px solid var(--gold-400);
+    outline-offset: 2px;
+  }
+
+  .pv-stage {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    overflow: auto;
+    padding: 10px;
+  }
+
+  .pv-stage>* {
+    margin: auto;
+  }
+
+  .pv-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px 14px;
+    flex-wrap: wrap;
+    padding: 12px 20px;
+    background: #fff;
+    border-top: 1px solid var(--line);
+  }
+
+  .pv-bar .field-error {
+    flex: 1 1 200px;
+    text-align: center;
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  /* =====================================================================
+     NIKAH NAMA — the template image is the paper, details sit on top of it.
+     Everything inside .nk-paper is sized in cqw (1% of paper width), so the
+     overlay scales with the image on screen and on A4.
+
+     CALIBRATION
+     • Add ?nkdebug=1 to the page URL to outline every field box.
+     • Nudge or scale the WHOLE overlay with the four variables on .nk-layer.
+     • Move a single field by editing its .f-… rule at the bottom of this block.
+       All values are % of the image (left/top from the top-left corner).
+     ===================================================================== */
+  .nk-paper {
+    --nk-ratio: 0.5615;
+    position: relative;
+    flex: none;
+    width: min(100%, calc(var(--pv-h, 100vh) * var(--nk-ratio)));
+    aspect-ratio: var(--nk-ratio);
+    container-type: inline-size;
+    background: #fff;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  }
+
+  .nk-bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .nk-layer {
+    --nk-dx: 0%;
+    --nk-dy: 0%;
+    --nk-sx: 1;
+    --nk-sy: 1;
+    position: absolute;
+    inset: 0;
+    transform-origin: 0 0;
+    transform: translate(var(--nk-dx), var(--nk-dy)) scale(var(--nk-sx), var(--nk-sy));
+  }
+
+  .nk-f {
+    --fs: 1.5;
+    position: absolute;
+    display: flex;
+    overflow: hidden;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 500;
+    font-size: calc(var(--fs) * 1cqw);
+    line-height: 1.3;
+    color: #0c1d12;
+  }
+
+  .nk-f .ur,
+  .nk-col.nk-ur {
+    font-family: 'Noto Nastaliq Urdu', 'Scheherazade New', serif;
+    font-weight: 500;
+    line-height: 1.95;
+  }
+
+  /* single line — safe centring: auto margins fall back to 0 if the text is too wide */
+  .nk-f.one {
+    overflow: visible;
+    align-items: center;
+    white-space: nowrap;
+  }
+
+  .nk-f.one.c>span {
+    margin: 0 auto;
+  }
+
+  .nk-f.one.r>span {
+    margin-left: auto;
+  }
+
+  .nk-f.one .ur {
+    line-height: 1.6;
+  }
+
+  .nk-f.sign {
+    font-family: 'EB Garamond', serif;
+    font-style: italic;
+    font-weight: 500;
+  }
+
+  /* stacked: English over Urdu (date, day, time) */
+  .nk-f.col {
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    text-align: center;
+  }
+
+  .nk-f.col>span {
+    margin: 0 auto;
+  }
+
+  /* two columns: English left, Urdu right (location, people) */
+  .nk-p {
+    gap: 2.4%;
+    align-items: stretch;
+  }
+
+  .nk-col {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow-wrap: anywhere;
+  }
+
+  .nk-col>:first-child {
+    margin-top: auto;
+  }
+
+  .nk-col>:last-child {
+    margin-bottom: auto;
+  }
+
+  .nk-col b {
+    font-weight: 600;
+  }
+
+  .nk-col span {
+    font-size: 0.93em;
+    color: #1f3226;
+  }
+
+  .nk-col.nk-en {
+    text-align: left;
+    direction: ltr;
+  }
+
+  .nk-col.nk-ur {
+    text-align: right;
+    direction: rtl;
+  }
+
+  .nk-tick {
+    overflow: visible;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .nk-tick svg {
+    flex: none;
+    width: 150%;
+    height: 150%;
+  }
+
+  body.nk-debug .nk-f {
+    outline: 1px dashed #e11d48;
+    background: rgba(225, 29, 72, 0.07);
+  }
+
+  /* — field positions (% of the template image) — */
+  .f-sanad {
+    left: 63.45%;
+    top: 21.64%;
+    width: 15.02%;
+    height: 2.39%;
+  }
+
+  .f-jild {
+    left: 6.63%;
+    top: 21.64%;
+    width: 14.02%;
+    height: 2.39%;
+  }
+
+  .f-date {
+    left: 70.21%;
+    top: 25.72%;
+    width: 18.27%;
+    height: 3.65%;
+  }
+
+  .f-day {
+    left: 36.92%;
+    top: 25.72%;
+    width: 20.03%;
+    height: 3.65%;
+  }
+
+  .f-time {
+    left: 19.02%;
+    top: 25.72%;
+    width: 9.89%;
+    height: 3.65%;
+  }
+
+  .f-loc {
+    left: 22.28%;
+    top: 30.15%;
+    width: 45.56%;
+    height: 3.58%;
+  }
+
+  .f-groom {
+    left: 22.28%;
+    top: 34.65%;
+    width: 45.56%;
+    height: 7.59%;
+  }
+
+  .f-bride {
+    left: 22.28%;
+    top: 43.29%;
+    width: 45.56%;
+    height: 7.59%;
+  }
+
+  .f-vakil {
+    left: 22.28%;
+    top: 51.93%;
+    width: 45.56%;
+    height: 7.59%;
+  }
+
+  .f-wit1 {
+    left: 22.28%;
+    top: 60.58%;
+    width: 45.56%;
+    height: 7.59%;
+  }
+
+  .f-wit2 {
+    left: 22.28%;
+    top: 69.22%;
+    width: 45.56%;
+    height: 7.59%;
+  }
+
+  .f-amount {
+    left: 8.51%;
+    top: 78.99%;
+    width: 11.76%;
+    height: 2.39%;
+  }
+
+  .f-q-name-en {
+    left: 43.55%;
+    top: 83.56%;
+    width: 19.65%;
+    height: 1.41%;
+  }
+
+  .f-q-name-ur {
+    left: 63.70%;
+    top: 83.56%;
+    width: 18.77%;
+    height: 1.41%;
+  }
+
+  .f-q-addr-en {
+    left: 43.55%;
+    top: 85.95%;
+    width: 21.78%;
+    height: 1.34%;
+  }
+
+  .f-q-addr-ur {
+    left: 65.83%;
+    top: 85.95%;
+    width: 22.65%;
+    height: 1.34%;
+  }
+
+  .f-q-sign {
+    left: 44.06%;
+    top: 89.67%;
+    width: 34.54%;
+    height: 2.32%;
+  }
+
+  /* maher type tick marks (centred on the printed check boxes) */
+  .f-tk-def-en {
+    left: 38.80%;
+    top: 78.00%;
+    width: 2.00%;
+    height: 1.12%;
+  }
+
+  .f-tk-pro-en {
+    left: 56.95%;
+    top: 78.00%;
+    width: 2.00%;
+    height: 1.12%;
+  }
+
+  .f-tk-pro-ur {
+    left: 81.60%;
+    top: 80.74%;
+    width: 2.13%;
+    height: 1.19%;
+  }
+
+  .f-tk-def-ur {
+    left: 90.74%;
+    top: 80.74%;
+    width: 2.13%;
+    height: 1.19%;
+  }
+
+  /* ---------- print ----------
+     body.is-printing is set only when the preview's Print button is pressed. The Nikah Nama is an
+     <img> + overlay sized to the A4 printable area (194 × 281 mm), so there is no scaling script.
+     @page and the dashboard hiding (.admin-shell) live in the host page. */
+  @media print {
+    body.is-printing #nikah-reg-modal {
+      display: none !important;
+    }
+
+    body.is-printing #nikah-cert-preview-modal.is-print-active {
+      display: block !important;
+      position: static;
+      inset: auto;
+      padding: 0;
+      overflow: visible;
+      background: none !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+    }
+
+    body.is-printing #nikah-cert-preview-modal .pv-shell {
+      display: block;
+      position: static;
+      width: 100%;
+      height: auto;
+      background: #fff !important;
+      animation: none;
+    }
+
+    body.is-printing #nikah-cert-preview-modal .pv-stage {
+      display: block;
+      padding: 0;
+      overflow: visible;
+    }
+
+    body.is-printing #nikah-cert-preview-modal .nk-paper {
+      width: min(194mm, calc(279mm * var(--nk-ratio)));
+      margin: 0 auto;
+      box-shadow: none;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    body.is-printing #nikah-cert-preview-modal .pv-close,
+    body.is-printing #nikah-cert-preview-modal .pv-bar,
+    body.is-printing #nikah-cert-preview-modal #nikah-cert-preview-error {
+      display: none !important;
+    }
+
+    body.is-printing .nk-f {
+      outline: 0 !important;
+      background: none !important;
+    }
+
+    body.is-printing #nikah-cert-preview-modal,
+    body.is-printing #nikah-cert-preview-modal * {
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+  }
+</style>
+    {% include "_paper_css.html" %}
+{# ─── NIKAH REGISTRATION WORKSPACE (register a Nikah Nama directly) ─────────── #}
+<div class="modal-overlay" id="nikah-reg-modal">
+  <div class="nr-shell" role="dialog" aria-modal="true" aria-labelledby="nikah-reg-title">
+
+    <header class="nr-head">
+      <div class="nr-head-title">
+        <h3 id="nikah-reg-title">New Nikah Registration</h3>
+        <p>For walk-ins, phone bookings and paper forms. Type in English — the Urdu fills in by itself and stays
+          editable.</p>
+      </div>
+
+      <button type="button" class="nr-close" id="nikah-new-reg-close" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6 6 18M6 6l12 12" />
+        </svg>
+      </button>
+    </header>
+
+    <div class="nr-body" id="nikah-nr-body">
+
+      {# section jump list #}
+      <nav class="nr-nav" id="nikah-nr-nav" aria-label="Form sections">
+        <button type="button" data-target="sec-cert"><span class="nr-dot" data-n="1"></span>Details<span
+            class="nr-nav-ur" lang="ur">تفصیل</span></button>
+        <button type="button" data-target="sec-groom"><span class="nr-dot" data-n="2"></span>Groom<span
+            class="nr-nav-ur" lang="ur">ناکح</span></button>
+        <button type="button" data-target="sec-bride"><span class="nr-dot" data-n="3"></span>Bride<span
+            class="nr-nav-ur" lang="ur">منکوحہ</span></button>
+        <button type="button" data-target="sec-vakil"><span class="nr-dot" data-n="4"></span>Vakil<span
+            class="nr-nav-ur" lang="ur">وکیل</span></button>
+        <button type="button" data-target="sec-witness"><span class="nr-dot" data-n="5"></span>Witnesses<span
+            class="nr-nav-ur" lang="ur">گواہان</span></button>
+        <button type="button" data-target="sec-maher"><span class="nr-dot" data-n="6"></span>Maher<span
+            class="nr-nav-ur" lang="ur">مہر</span></button>
+        <button type="button" data-target="sec-qazi"><span class="nr-dot" data-n="7"></span>Qazi &amp; status<span
+            class="nr-nav-ur" lang="ur">قاضی</span></button>
+      </nav>
+
+      <div class="nr-scroll" id="nikah-nr-scroll">
+        <div class="nr-content">
+
+          <form id="form-nikah-direct" novalidate>
+
+            <section class="nr-sec" id="sec-cert">
+              <div class="nr-sec-head">
+                <h4>Certificate details</h4>
+                <span class="title-ur" lang="ur" dir="rtl">سند کی تفصیل</span>
+                <span class="nr-tag req">Required</span>
+              </div>
+              <p class="nr-hint">When and where the Nikah took place, and how to reach the family.</p>
+
+              <div class="fg fg-3">
+                <div>
+                  <label class="field-label" for="n-sanad"><span>Certificate no.</span><span class="lbl-ur"
+                      lang="ur">سند نمبر</span></label>
+                  <input id="n-sanad" name="sanad_no" type="text" inputmode="numeric" maxlength="20"
+                    class="field-input">
+                </div>
+                <div>
+                  <label class="field-label" for="n-jild"><span>Volume no.</span><span class="lbl-ur" lang="ur">جلد
+                      نمبر</span></label>
+                  <input id="n-jild" name="jild_no" type="text" inputmode="numeric" maxlength="20" class="field-input">
+                </div>
+                <div>
+                  <label class="field-label" for="n-contact"><span>Contact number<i class="req">*</i></span></label>
+                  <input id="n-contact" name="contact" type="tel" required maxlength="30" class="field-input"
+                    placeholder="For our records">
+                </div>
+              </div>
+
+              <div class="fg fg-3">
+                <div>
+                  <label class="field-label" for="n-date"><span>Date of Nikah<i class="req">*</i></span><span
+                      class="lbl-ur" lang="ur">تاریخ</span></label>
+                  <input id="n-date" name="nikah_date" type="date" required class="field-input">
+                </div>
+                <div>
+                  <label class="field-label" for="n-day"><span>Day</span><span class="lbl-ur"
+                      lang="ur">بروز</span></label>
+                  <input id="n-day" type="text" class="field-input" readonly tabindex="-1"
+                    placeholder="Fills from the date">
+                </div>
+                <div>
+                  <label class="field-label" for="n-time"><span>Time</span><span class="lbl-ur"
+                      lang="ur">وقت</span></label>
+                  <input id="n-time" name="nikah_time" type="time" class="field-input">
+                </div>
+              </div>
+
+              <div class="fg fg-2">
+                <div>
+                  <label class="field-label" for="n-location"><span>Nikah location (English)</span></label>
+                  <input id="n-location" name="nikah_location" type="text" maxlength="160" class="field-input"
+                    autocomplete="off">
+                </div>
+                <div>
+                  <label class="field-label ur-label" for="n-location-ur">مقام نکاح (اردو)</label>
+                  <input id="n-location-ur" name="nikah_location_ur" type="text" maxlength="160"
+                    class="field-input field-ur" dir="rtl" lang="ur">
+                </div>
+              </div>
+            </section>
+
+            <section class="nr-sec" id="sec-groom">
+              <div class="nr-sec-head">
+                <h4>Groom</h4>
+                <span class="title-ur" lang="ur" dir="rtl">ناکح</span>
+                <span class="nr-tag req">Required</span>
+              </div>
+              <p class="nr-hint">Write the name with the father's name (ولدیت), as it should read on the certificate.
+              </p>
+              {{ person_fields('groom', true) }}
+            </section>
+
+            <section class="nr-sec" id="sec-bride">
+              <div class="nr-sec-head">
+                <h4>Bride</h4>
+                <span class="title-ur" lang="ur" dir="rtl">منکوحہ</span>
+                <span class="nr-tag req">Required</span>
+              </div>
+              <p class="nr-hint">Write the name with the father's name (ولدیت), as it should read on the certificate.
+              </p>
+              {{ person_fields('bride', true) }}
+            </section>
+
+            <section class="nr-sec" id="sec-vakil">
+              <div class="nr-sec-head">
+                <h4>Vakil (Wali / Representative)</h4>
+                <span class="title-ur" lang="ur" dir="rtl">وکیل</span>
+                <span class="nr-tag">Optional</span>
+              </div>
+              <p class="nr-hint">Leave blank if there is no vakil.</p>
+              {{ person_fields('vakil') }}
+            </section>
+
+            <section class="nr-sec" id="sec-witness">
+              <div class="nr-sec-head">
+                <h4>Witnesses</h4>
+                <span class="title-ur" lang="ur" dir="rtl">گواہان</span>
+                <span class="nr-tag">Optional</span>
+              </div>
+              <div class="nr-sub">
+                <p class="nr-sub-title">Witness 1 <span class="title-ur" lang="ur" dir="rtl">گواہ اول</span></p>
+                {{ person_fields('witness1') }}
+              </div>
+              <div class="nr-sub">
+                <p class="nr-sub-title">Witness 2 <span class="title-ur" lang="ur" dir="rtl">گواہ دوم</span></p>
+                {{ person_fields('witness2') }}
+              </div>
+            </section>
+
+            <section class="nr-sec" id="sec-maher">
+              <div class="nr-sec-head">
+                <h4>Maher (Dower)</h4>
+                <span class="title-ur" lang="ur" dir="rtl">مہر</span>
+                <span class="nr-tag">Optional</span>
+              </div>
+              <div class="fg fg-2">
+                <div>
+                  <label class="field-label" for="n-maher"><span>Amount</span></label>
+                  <div class="money">
+                    <b>{{ currency_symbol|default('₹') }}</b>
+                    <input id="n-maher" name="maher_amount" type="number" inputmode="numeric" min="0" step="1"
+                      class="field-input">
+                  </div>
+                </div>
+                <div>
+                  <label class="field-label"><span>Type</span></label>
+                  <div class="seg" role="radiogroup" aria-label="Dower type">
+                    <label><input type="radio" name="dower_type" value="prompt" checked><span>Prompt
+                        <em lang="ur">معجل</em></span></label>
+                    <label><input type="radio" name="dower_type" value="deferred"><span>Deferred
+                        <em lang="ur">مؤجل</em></span></label>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="nr-sec" id="sec-qazi">
+              <div class="nr-sec-head">
+                <h4>Qazi &amp; status</h4>
+                <span class="title-ur" lang="ur" dir="rtl">قاضی</span>
+                <span class="nr-tag">Optional</span>
+              </div>
+              <div class="fg fg-2">
+                <div>
+                  <label class="field-label" for="n-qazi-name"><span>Full name of Qazi (English)</span></label>
+                  <input id="n-qazi-name" name="qazi_name" type="text" maxlength="120" class="field-input"
+                    autocomplete="off">
+                </div>
+                <div>
+                  <label class="field-label ur-label" for="n-qazi-name-ur">قاضی کا نام (اردو)</label>
+                  <input id="n-qazi-name-ur" name="qazi_name_ur" type="text" maxlength="120"
+                    class="field-input field-ur" dir="rtl" lang="ur">
+                </div>
+              </div>
+              <div class="fg fg-2">
+                <div>
+                  <label class="field-label" for="n-qazi-address"><span>Address (English)</span></label>
+                  <input id="n-qazi-address" name="qazi_address" type="text" maxlength="160" class="field-input"
+                    autocomplete="off">
+                </div>
+                <div>
+                  <label class="field-label ur-label" for="n-qazi-address-ur">پتہ (اردو)</label>
+                  <input id="n-qazi-address-ur" name="qazi_address_ur" type="text" maxlength="160"
+                    class="field-input field-ur" dir="rtl" lang="ur">
+                </div>
+              </div>
+              <div class="fg fg-2">
+                <div>
+                  <label class="field-label" for="n-qazi-sign"><span>Qazi signature (typed)</span></label>
+                  <input id="n-qazi-sign" name="qazi_signature" type="text" maxlength="120" class="field-input"
+                    placeholder="Typed full name as signature">
+                </div>
+                <div>
+                  <label class="field-label" for="n-status"><span>Record status</span></label>
+                  <select id="n-status" name="status" class="field-input">
+                    <option value="approved" selected>Approved</option>
+                    <option value="contacted">Contacted</option>
+                    <option value="pending">Pending</option>
+                  </select>
+                </div>
+              </div>
+            </section>
+          </form>
+
+        </div>
+      </div>
+    </div>
+
+    <footer class="nr-foot">
+      <button type="button" class="btn-glass btn-glass--ghost" id="nikah-urdu-auto-btn"
+        style="padding:9px 14px;">Auto-fill Urdu</button>
+      <div class="nr-foot-msg">
+        <span class="urdu-status" id="nikah-urdu-status" role="status"></span>
+        <p class="field-error" id="nikah-new-reg-error" role="alert"></p>
+      </div>
+      <span class="nr-progress" id="nikah-nr-progress"></span>
+      <div class="modal-actions">
+        <button type="button" class="btn-glass btn-glass--ghost" id="nikah-new-reg-cancel">Cancel</button>
+        <button type="button" class="btn-glass btn-glass--solid-moss" id="nikah-new-reg-preview">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+          Preview
+        </button>
+        <button type="button" class="btn-glass btn-glass--solid-gold" id="nikah-new-reg-save">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z" />
+            <path d="M17 21v-8H7v8M7 3v5h8" />
+          </svg>
+          Save Record
+        </button>
+      </div>
+    </footer>
+  </div>
+</div>
+
+{# ─── NIKAH NAMA PREVIEW (template image + details) ─────────── #}
+<div class="modal-overlay" id="nikah-cert-preview-modal">
+  <div class="pv-shell" role="dialog" aria-modal="true" aria-labelledby="nikah-cert-preview-title">
+    <button type="button" class="pv-close" id="nikah-cert-preview-close" aria-label="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M18 6 6 18M6 6l12 12" />
+      </svg>
+    </button>
+    <h3 id="nikah-cert-preview-title" class="visually-hidden">Nikah Nama preview</h3>
+
+    <div class="pv-stage" id="nikah-cert-preview-body"><!-- populated by JS --></div>
+
+    <div class="pv-bar">
+      <button type="button" class="btn-glass btn-glass--ghost" id="nikah-cert-back-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 12H5M12 19l-7-7 7-7" />
+        </svg>
+        Back to Edit
+      </button>
+      <p class="field-error" id="nikah-cert-preview-error" role="alert"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn-glass btn-glass--solid-moss" id="nikah-cert-print-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path
+              d="M6 9V3h12v6M6 18H4a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-2M6 14h12v7H6z" />
+          </svg>
+          Print
+        </button>
+        <button type="button" class="btn-glass btn-glass--submit" id="nikah-cert-confirm-save-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round">
+            <path d="m22 2-7 20-4-9-9-4 20-7Z" />
+            <path d="M22 2 11 13" />
+          </svg>
+          Submit
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% include "_paper_js.html" %}
+<script>
+  (function () {
+    'use strict';
+
+    // ---------- template-injected config ----------
+    var URDU_ENDPOINT = {{ urdu_endpoint | default ('/admin/registrations/urdu') | tojson
+  }};
+  var SAVE_ENDPOINT = '/admin/registrations/nikah/new';
+  // Nikah Nama background. Default is static/img/nikha_temp — the extension is found automatically
+  // (.png / .jpg / .jpeg / .webp). Pass nikah_template_img='img/whatever.png' from Flask to override.
+  var NIKAH_TEMPLATE_URL = {{ (url_for('static', filename = nikah_template_img) if nikah_template_img is defined and nikah_template_img else url_for('static', filename = 'img/nikha_temp')) | tojson }};
+
+  var NIKAH_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="14" r="5"/><circle cx="15" cy="14" r="5"/></svg>';
+
+  var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+  var csrfToken = csrfMeta ? csrfMeta.content : '';
+
+  var modal = document.getElementById('nikah-reg-modal');
+  var certModal = document.getElementById('nikah-cert-preview-modal');
+  var form = document.getElementById('form-nikah-direct');
+  var nrScroll = document.getElementById('nikah-nr-scroll');
+  var nrNav = document.getElementById('nikah-nr-nav');
+  var nrNavBtns = Array.prototype.slice.call(nrNav.querySelectorAll('button'));
+  var nrSecs = nrNavBtns.map(function (b) { return document.getElementById(b.dataset.target); });
+  var errorEl = document.getElementById('nikah-new-reg-error');
+  var previewErrorEl = document.getElementById('nikah-cert-preview-error');
+
+  if (/[?&]nkdebug\b/.test(window.location.search)) document.body.classList.add('nk-debug');
+
+  // ---------- small helpers ----------
+  function txt(v) {
+    return (v === null || v === undefined) ? '' : String(v);
+  }
+
+  function escapeHtml(v) {
+    return txt(v).replace(/[&<>"']/g, function (c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+    });
+  }
+
+  function parseStamp(value) {
+    var s = txt(value).trim();
+    if (!s) return null;
+    // tolerate SQL-style "2026-09-16 09:12:00" (Safari returns NaN for that form)
+    s = s.replace(' ', 'T');
+    var d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  function pad2(n) {
+    return (n < 10 ? '0' : '') + n;
+  }
+
+  // ---------- Urdu helpers (digits, months, weekdays, time of day) ----------
+  var URDU_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
+  var URDU_MONTHS = ['جنوری', 'فروری', 'مارچ', 'اپریل', 'مئی', 'جون', 'جولائی', 'اگست', 'ستمبر', 'اکتوبر', 'نومبر', 'دسمبر'];
+  var URDU_DAYS = ['اتوار', 'پیر', 'منگل', 'بدھ', 'جمعرات', 'جمعہ', 'ہفتہ'];
+
+  function toUrduDigits(v) {
+    return txt(v).replace(/[0-9]/g, function (d) { return URDU_DIGITS.charAt(parseInt(d, 10)); });
+  }
+
+  // "14:30" -> { en: "2:30 PM", ur: "۲:۳۰ دوپہر" }
+  function timeBoth(t) {
+    var m = /^(\d{1,2}):(\d{2})/.exec(txt(t).trim());
+    if (!m) return { en: '', ur: '' };
+    var h = parseInt(m[1], 10);
+    var h12 = (h % 12 === 0) ? 12 : (h % 12);
+    var part = h < 12 ? 'صبح' : (h < 17 ? 'دوپہر' : 'شام');
+    return {
+      en: h12 + ':' + m[2] + ' ' + (h < 12 ? 'AM' : 'PM'),
+      ur: toUrduDigits(h12 + ':' + m[2]) + ' ' + part
+    };
+  }
+
+  function fmtDay(iso) {
+    var d = parseStamp(txt(iso) ? txt(iso) + 'T00:00:00' : '');
+    return d ? d.toLocaleDateString('en-US', { weekday: 'long' }) : '';
+  }
+
+  // ---------- workspace: open / close ----------
+  function formIsDirty() {
+    return Array.prototype.some.call(form.elements, function (el) {
+      if (el.type === 'radio' || el.type === 'checkbox') return el.checked !== el.defaultChecked;
+      if (el.tagName === 'SELECT') return el.selectedIndex !== 0;
+      return txt(el.value).trim() !== '';
+    });
+  }
+
+  function openNikahReg() {
+    modal.classList.add('is-open');
+    nrScroll.style.scrollBehavior = 'auto';
+    nrScroll.scrollTop = 0;
+    nrScroll.style.scrollBehavior = '';
+    updateSpy();
+    updateProgress();
+  }
+
+  function closeNikahReg() {
+    modal.classList.remove('is-open');
+    errorEl.textContent = '';
+  }
+
+  function requestCloseNikahReg() {
+    if (formIsDirty() && !window.confirm('Discard this registration? Anything you have typed will be lost.')) return;
+    closeNikahReg();
+  }
+
+  function closePreview() {
+    certModal.classList.remove('is-open');
+  }
+
+  // any element with data-open-nikah-reg opens the workspace (delegated, so load order doesn't matter)
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest ? e.target.closest('[data-open-nikah-reg]') : null;
+    if (t) openNikahReg();
+  });
+
+  window.NikahReg = { open: openNikahReg, close: requestCloseNikahReg };
+
+  document.getElementById('nikah-new-reg-close').addEventListener('click', requestCloseNikahReg);
+  document.getElementById('nikah-new-reg-cancel').addEventListener('click', requestCloseNikahReg);
+  // NOTE: deliberately no overlay-click-to-close — it used to discard a half-filled Nikah Nama.
+
+  document.getElementById('nikah-cert-preview-close').addEventListener('click', closePreview);
+  document.getElementById('nikah-cert-back-btn').addEventListener('click', closePreview);
+
+  // close only the topmost open layer
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    if (certModal.classList.contains('is-open')) { closePreview(); return; }
+    if (modal.classList.contains('is-open')) requestCloseNikahReg();
+  });
+
+  // ---------- section rail: highlight the section in view, tick sections that are complete ----------
+  function secTop(sec) {
+    return sec.getBoundingClientRect().top - nrScroll.getBoundingClientRect().top + nrScroll.scrollTop;
+  }
+
+  function updateSpy() {
+    var y = nrScroll.scrollTop + 90;
+    var cur = 0;
+    nrSecs.forEach(function (s, i) { if (secTop(s) <= y) cur = i; });
+    if (nrScroll.scrollTop + nrScroll.clientHeight >= nrScroll.scrollHeight - 4) cur = nrSecs.length - 1;
+    nrNavBtns.forEach(function (b, i) { b.classList.toggle('is-current', i === cur); });
+    // keep the current chip visible in the horizontal rail on small screens
+    var curBtn = nrNavBtns[cur];
+    if (nrNav.scrollWidth > nrNav.clientWidth) {
+      nrNav.scrollLeft = curBtn.offsetLeft - (nrNav.clientWidth - curBtn.offsetWidth) / 2;
+    }
+  }
+
+  var spyQueued = false;
+  nrScroll.addEventListener('scroll', function () {
+    if (spyQueued) return;
+    spyQueued = true;
+    window.requestAnimationFrame(function () { spyQueued = false; updateSpy(); });
+  });
+
+  nrNavBtns.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var sec = document.getElementById(btn.dataset.target);
+      nrScroll.scrollTo({ top: secTop(sec) - 14, behavior: 'smooth' });
+      var first = sec.querySelector('input:not([readonly]), textarea, select');
+      if (first) window.setTimeout(function () { first.focus({ preventScroll: true }); }, 350);
+    });
+  });
+
+  function isFilled(el) {
+    return txt(el.value).trim() !== '';
+  }
+
+  function updateProgress() {
+    nrSecs.forEach(function (sec, i) {
+      var req = Array.prototype.slice.call(sec.querySelectorAll('[required]'));
+      var done;
+      if (req.length) {
+        done = req.every(isFilled);
+      } else {
+        done = Array.prototype.some.call(sec.querySelectorAll('input, textarea'), function (el) {
+          return el.type !== 'radio' && !el.readOnly && isFilled(el);
+        });
+      }
+      nrNavBtns[i].classList.toggle('is-done', done);
+    });
+
+    var allReq = Array.prototype.slice.call(form.querySelectorAll('[required]'));
+    var filled = allReq.filter(isFilled).length;
+    var pg = document.getElementById('nikah-nr-progress');
+    pg.textContent = 'Required: ' + filled + ' of ' + allReq.length;
+    pg.classList.toggle('is-complete', filled === allReq.length);
+  }
+
+  function updateDay() {
+    var v = document.getElementById('n-date').value;
+    var d = v ? parseStamp(v + 'T00:00:00') : null;
+    document.getElementById('n-day').value = d ? (fmtDay(v) + ' · ' + URDU_DAYS[d.getDay()]) : '';
+  }
+
+  form.addEventListener('input', updateProgress);
+  form.addEventListener('change', function () { updateDay(); updateProgress(); });
+  form.addEventListener('submit', function (e) { e.preventDefault(); });
+
+  function collectFormData() {
+    var data = {};
+    new FormData(form).forEach(function (value, key) { data[key] = value; });
+    return data;
+  }
+
+  function validateForm() {
+    if (!form.reportValidity()) {
+      errorEl.textContent = 'Fill the fields marked * to continue.';
+      return null;
+    }
+    errorEl.textContent = '';
+    return collectFormData();
+  }
+
+  // ---------- NIKAH NAMA — template image + details laid on top ----------
+
+  // Finds the template image (static/img/nikha_temp.png|jpg|jpeg|webp) and reads its shape once.
+  var templatePromise = null;
+
+  function loadNikahTemplate() {
+    if (templatePromise) return templatePromise;
+    var base = NIKAH_TEMPLATE_URL;
+    var tries = /\.(png|jpe?g|webp|gif|svg)$/i.test(base)
+      ? [base]
+      : ['.png', '.jpg', '.jpeg', '.webp'].map(function (ext) { return base + ext; });
+
+    templatePromise = new Promise(function (resolve) {
+      (function next(i) {
+        if (i >= tries.length) { templatePromise = null; resolve(null); return; }
+        var img = new Image();
+        img.onload = function () {
+          resolve({ src: tries[i], ratio: img.naturalWidth / img.naturalHeight });
+        };
+        img.onerror = function () { next(i + 1); };
+        img.src = tries[i];
+      })(0);
+    });
+    return templatePromise;
+  }
+
+  // single line of text in one box. align: 'c' centred, 'l' left, 'r' right (Urdu)
+  function nkOne(cls, fs, text, align, isUr, extra) {
+    var t = txt(text).trim();
+    if (!t) return '';
+    return '<div class="nk-f nk-fit one ' + (align || 'c') + ' ' + cls + (extra ? ' ' + extra : '') + '" data-fs="' + fs + '">' +
+      '<span' + (isUr ? ' class="ur" dir="rtl" lang="ur"' : '') + '>' + escapeHtml(t) + '</span></div>';
+  }
+
+  // English line over Urdu line, centred in the box (date, day, time)
+  function nkStack(cls, fs, en, ur) {
+    var e = txt(en).trim(), u = txt(ur).trim();
+    if (!e && !u) return '';
+    return '<div class="nk-f nk-fit col ' + cls + '" data-fs="' + fs + '">' +
+      (e ? '<span>' + escapeHtml(e) + '</span>' : '') +
+      (u ? '<span class="ur" dir="rtl" lang="ur">' + escapeHtml(u) + '</span>' : '') +
+      '</div>';
+  }
+
+  // one column of a two-column box: bold main line + lighter second line
+  function nkCol(kind, main, sub) {
+    var m = txt(main).trim(), s = txt(sub).trim();
+    if (!m && !s) return '';
+    return '<div class="nk-col nk-' + kind + '"' + (kind === 'ur' ? ' dir="rtl" lang="ur"' : '') + '>' +
+      (m ? '<b>' + escapeHtml(m) + '</b>' : '') +
+      (s ? '<span>' + escapeHtml(s) + '</span>' : '') +
+      '</div>';
+  }
+
+  function nkTwoCol(cls, fs, enHtml, urHtml) {
+    if (!enHtml && !urHtml) return '';
+    return '<div class="nk-f nk-fit nk-p ' + cls + '" data-fs="' + fs + '">' + enHtml + urHtml + '</div>';
+  }
+
+  function nkPerson(cls, name, nameUr, age, addr, addrUr) {
+    var a = txt(age).trim();
+    var enMeta = [a ? ('Age ' + a) : '', txt(addr).trim()].filter(Boolean).join(' · ');
+    var hasUr = txt(nameUr).trim() || txt(addrUr).trim();
+    var urMeta = [a ? ('عمر ' + toUrduDigits(a) + ' سال') : '', txt(addrUr).trim()].filter(Boolean).join(' · ');
+    return nkTwoCol(cls, 1.45, nkCol('en', name, enMeta), hasUr ? nkCol('ur', nameUr, urMeta) : '');
+  }
+
+  function nkTick(cls) {
+    return '<div class="nk-f nk-tick ' + cls + '"><svg viewBox="0 0 24 24" fill="none" stroke="#17722f" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg></div>';
+  }
+
+  function renderNikahPaper(d, tpl) {
+    var dt = txt(d.nikah_date) ? parseStamp(txt(d.nikah_date) + 'T00:00:00') : null;
+    var numDate = dt ? pad2(dt.getDate()) + '/' + pad2(dt.getMonth() + 1) + '/' + dt.getFullYear() : '';
+    var urDate = dt
+      ? toUrduDigits(dt.getDate()) + ' ' + URDU_MONTHS[dt.getMonth()] + ' ' + toUrduDigits(dt.getFullYear())
+      : '';
+    var enDay = dt ? fmtDay(d.nikah_date) : '';
+    var urDay = dt ? URDU_DAYS[dt.getDay()] : '';
+    var tm = timeBoth(d.nikah_time);
+
+    var amount = txt(d.maher_amount).trim() || '0';
+    var promptOn = d.dower_type !== 'deferred';
+
+    return '' +
+      '<div class="nk-paper" style="--nk-ratio:' + tpl.ratio.toFixed(5) + '">' +
+      '<img class="nk-bg" src="' + escapeHtml(tpl.src) + '" alt="Nikah Nama">' +
+      '<div class="nk-layer">' +
+
+      nkOne('f-sanad', 2.0, d.sanad_no, 'c', false, 'strong') +
+      nkOne('f-jild', 2.0, d.jild_no, 'c', false, 'strong') +
+
+      nkStack('f-date', 1.5, numDate, urDate) +
+      nkStack('f-day', 1.5, enDay, urDay) +
+      nkStack('f-time', 1.4, tm.en, tm.ur) +
+
+      nkTwoCol('f-loc', 1.5,
+        nkCol('en', d.nikah_location, ''),
+        txt(d.nikah_location_ur).trim() ? nkCol('ur', d.nikah_location_ur, '') : '') +
+
+      nkPerson('f-groom', d.groom_name, d.groom_name_ur, d.groom_age, d.groom_address, d.groom_address_ur) +
+      nkPerson('f-bride', d.bride_name, d.bride_name_ur, d.bride_age, d.bride_address, d.bride_address_ur) +
+      nkPerson('f-vakil', d.vakil_name, d.vakil_name_ur, d.vakil_age, d.vakil_address, d.vakil_address_ur) +
+      nkPerson('f-wit1', d.witness1_name, d.witness1_name_ur, d.witness1_age, d.witness1_address, d.witness1_address_ur) +
+      nkPerson('f-wit2', d.witness2_name, d.witness2_name_ur, d.witness2_age, d.witness2_address, d.witness2_address_ur) +
+
+      nkOne('f-amount', 1.9, amount, 'c', false, 'strong') +
+      nkTick(promptOn ? 'f-tk-pro-en' : 'f-tk-def-en') +
+      nkTick(promptOn ? 'f-tk-pro-ur' : 'f-tk-def-ur') +
+
+      nkOne('f-q-name-en', 1.35, d.qazi_name, 'l', false) +
+      nkOne('f-q-name-ur', 1.35, d.qazi_name_ur, 'r', true) +
+      nkOne('f-q-addr-en', 1.3, d.qazi_address, 'l', false) +
+      nkOne('f-q-addr-ur', 1.3, d.qazi_address_ur, 'r', true) +
+      nkOne('f-q-sign', 2.2, d.qazi_signature, 'l', false, 'sign') +
+
+      '</div></div>';
+  }
+
+  // Shrinks any box whose text does not fit, in small steps, so long addresses stay inside their cell.
+  // Sizes are in cqw, so the result holds when the paper is scaled for printing.
+  function fitOverlay(root) {
+    Array.prototype.forEach.call(root.querySelectorAll('.nk-fit'), function (el) {
+      var fs = parseFloat(el.getAttribute('data-fs')) || 1.5;
+      var min = fs * 0.55, guard = 0;
+      el.style.setProperty('--fs', fs);
+      while (guard++ < 50 && fs > min &&
+        (el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1)) {
+        fs = Math.round((fs - 0.05) * 100) / 100;
+        el.style.setProperty('--fs', fs);
+      }
+    });
+  }
+
+  // ---------- auto Urdu (server-side Gemini transliteration) ----------
+  function setUrduStatus(msg, isError) {
+    var el = document.getElementById('nikah-urdu-status');
+    el.textContent = msg || '';
+    el.classList.toggle('is-error', !!isError);
+  }
+
+  // every "<x>_ur" input paired with its English "<x>" input
+  function urduPairs() {
+    var pairs = [];
+    Array.prototype.forEach.call(form.elements, function (el) {
+      if (!el.name || !/_ur$/.test(el.name)) return;
+      var en = form.elements[el.name.slice(0, -3)];
+      if (en) pairs.push({ en: en, ur: el });
+    });
+    return pairs;
+  }
+
+  function fetchUrdu(texts, attempt) {
+    attempt = attempt || 1;
+    return fetch(URDU_ENDPOINT, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+      body: JSON.stringify({ items: texts })
+    })
+      .then(function (res) {
+        if (res.ok) return res.json();
+        return res.json().catch(function () { return {}; }).then(function (payload) {
+          var retryAfter = payload && payload.retry_after;
+          if ((res.status === 429 || res.status === 503) && retryAfter && attempt < 4) {
+            setUrduStatus('Translation service is busy — retrying in ' + retryAfter + 's…');
+            return new Promise(function (resolve) { setTimeout(resolve, retryAfter * 1000); })
+              .then(function () { return fetchUrdu(texts, attempt + 1); });
+          }
+          throw new Error(res.status === 429
+            ? 'Translation quota hit — wait a minute, or translate fewer fields at once.'
+            : 'Auto-Urdu unavailable — type the Urdu manually.');
+        });
+      })
+      .then(function (payload) {
+        if (!payload || !Array.isArray(payload.items) || payload.items.length !== texts.length) {
+          throw new Error('Unexpected Urdu response');
+        }
+        return payload.items;
+      });
+  }
+
+  // Fills Urdu boxes the user has not typed in themselves. overwriteAuto=true also refreshes
+  // boxes that were previously auto-filled (used when the English text changes).
+  function translatePairs(pairs, overwriteAuto) {
+    var todo = pairs.filter(function (p) {
+      if (p.ur.dataset.manual === '1') return false;
+      if (!txt(p.en.value).trim()) {
+        if (p.ur.dataset.auto === '1') { p.ur.value = ''; p.ur.dataset.auto = ''; }
+        return false;
+      }
+      return overwriteAuto || !txt(p.ur.value).trim();
+    });
+    if (!todo.length) return Promise.resolve(0);
+
+    var sent = todo.map(function (p) { return txt(p.en.value).trim(); });
+    setUrduStatus('Translating to Urdu…');
+
+    return fetchUrdu(sent)
+      .then(function (items) {
+        todo.forEach(function (p, i) {
+          var v = txt(items[i]).trim();
+          // skip if the user typed Urdu or changed the English while we waited
+          if (!v || p.ur.dataset.manual === '1' || txt(p.en.value).trim() !== sent[i]) return;
+          p.ur.value = v;
+          p.ur.dataset.auto = '1';
+        });
+        setUrduStatus('Urdu filled automatically — edit any box to correct it.');
+        updateProgress();
+        return todo.length;
+      })
+      .catch(function (err) {
+        console.error(err);
+        setUrduStatus((err && err.message) || 'Auto-Urdu unavailable — type the Urdu manually.', true);
+        return 0;
+      });
+  }
+
+  // typing in an Urdu box locks it against auto-overwrite; clearing it hands control back
+  form.addEventListener('input', function (e) {
+    var el = e.target;
+    if (!el.name || !/_ur$/.test(el.name)) return;
+    el.dataset.manual = txt(el.value).trim() ? '1' : '';
+    el.dataset.auto = '';
+  });
+
+  // leaving an English box queues its Urdu twin for translation — batched with a short
+  // debounce so tabbing through 10 fields in a row sends ONE request, not 10.
+  var pendingTranslatePairs = [];
+  var translateDebounceTimer = null;
+
+  form.addEventListener('change', function (e) {
+    var el = e.target;
+    if (!el.name || /_ur$/.test(el.name)) return;
+    var ur = form.elements[el.name + '_ur'];
+    if (!ur) return;
+
+    pendingTranslatePairs = pendingTranslatePairs.filter(function (p) { return p.en !== el; });
+    pendingTranslatePairs.push({ en: el, ur: ur });
+
+    clearTimeout(translateDebounceTimer);
+    translateDebounceTimer = setTimeout(function () {
+      var batch = pendingTranslatePairs;
+      pendingTranslatePairs = [];
+      if (batch.length) translatePairs(batch, true);
+    }, 1200);
+  });
+
+  form.addEventListener('reset', function () {
+    Array.prototype.forEach.call(form.querySelectorAll('.field-ur'), function (el) {
+      el.dataset.manual = '';
+      el.dataset.auto = '';
+    });
+    setUrduStatus('');
+    // reset fires before values are cleared — refresh afterwards
+    window.setTimeout(function () { updateDay(); updateProgress(); }, 0);
+  });
+
+  document.getElementById('nikah-urdu-auto-btn').addEventListener('click', function () {
+    var btn = this;
+    btn.disabled = true;
+    translatePairs(urduPairs(), false).finally(function () { btn.disabled = false; });
+  });
+  // -----preview-----
+  function showPreview(data) {
+    var body = document.getElementById('nikah-cert-preview-body');
+    previewErrorEl.textContent = '';
+    body.innerHTML = NikahPaper.render(data);
+    certModal.classList.add('is-open');
+    void body.offsetHeight;
+    NikahPaper.fit(body);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { NikahPaper.fit(body); });
+    return Promise.resolve();
+  }
+  document.getElementById('nikah-new-reg-preview').addEventListener('click', function () {
+    var btn = this;
+    if (!validateForm()) return;
+    btn.disabled = true;
+
+    var translate;
+    try { translate = translatePairs(urduPairs(), false); }
+    catch (e) { console.error(e); translate = Promise.resolve(); }
+    var timeout = new Promise(function (resolve) { setTimeout(resolve, 5000); });
+
+    Promise.race([translate, timeout])
+      .then(function () { return showPreview(collectFormData()); })
+      .catch(function (err) {
+        console.error(err);
+        errorEl.textContent = 'Could not open the preview: ' + ((err && err.message) || err);
+      })
+      .then(function () { btn.disabled = false; });
+  });
+  // ---------- print (preview only) ----------
+  function endPrint() {
+    document.body.classList.remove('is-printing');
+    certModal.classList.remove('is-print-active');
+  }
+
+  function printPreview() {
+    endPrint();
+    certModal.classList.add('is-print-active');
+    document.body.classList.add('is-printing');
+    window.print();
+    // afterprint doesn't fire everywhere; clean up either way
+    window.setTimeout(endPrint, 1000);
+  }
+
+  window.addEventListener('afterprint', endPrint);
+  document.getElementById('nikah-cert-print-btn').addEventListener('click', printPreview);
+
+  // ---------- table row for a freshly saved record ----------
+  function buildNikahRow(dbId, displayId, row) {
+    var tr = document.createElement('tr');
+    tr.className = 'reg-row is-new-row';
+
+    var primary = txt(row.bride) + ' & ' + txt(row.groom);
+    var secondary = 'Nikah date: ' + txt(row.nikah_date);
+    var contact = txt(row.contact);
+    var status = txt(row.status) || 'pending';
+
+    tr.dataset.id = txt(displayId);
+    tr.dataset.dbid = txt(dbId);
+    tr.dataset.type = 'nikah';
+    tr.dataset.status = status;
+    tr.dataset.submitted = txt(row.submitted_at);
+    tr.dataset.search = (txt(row.bride) + ' ' + txt(row.groom) + ' ' + contact).toLowerCase();
+    tr.dataset.primary = primary;
+    tr.dataset.secondary = secondary;
+    tr.dataset.contact = contact;
+    tr.dataset.fieldBride = txt(row.bride);
+    tr.dataset.fieldGroom = txt(row.groom);
+    tr.dataset.fieldNikahdate = txt(row.nikah_date);
+
+    tr.innerHTML =
+      '<td class="name-cell">' + escapeHtml(primary) + '<span class="sub">' + escapeHtml(secondary) + '</span></td>' +
+      '<td><span class="badge badge-nikah">' + NIKAH_ICON + ' Nikah</span></td>' +
+      '<td><span class="badge badge-' + escapeHtml(status) + ' status-badge">' +
+      escapeHtml(status.charAt(0).toUpperCase() + status.slice(1)) + '</span></td>' +
+      '<td class="timestamp-cell">' + escapeHtml(row.display_date) +
+      '<span class="sub">' + escapeHtml(row.display_time) + '</span></td>' +
+      '<td>' + escapeHtml(contact) + '</td>' +
+      '<td class="view-cell">View <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></td>';
+
+    return tr;
+  }
+
+  // ---------- save ----------
+  function saveNikah() {
+    var data = validateForm();
+    if (!data) return;
+
+    var saveBtn = document.getElementById('nikah-new-reg-save');
+    var submitBtn = document.getElementById('nikah-cert-confirm-save-btn');
+    var submitHtml = submitBtn.innerHTML;
+
+    [saveBtn, submitBtn].forEach(function (b) { b.disabled = true; });
+    submitBtn.textContent = 'Submitting…';
+    errorEl.textContent = '';
+    previewErrorEl.textContent = '';
+
+    fetch(SAVE_ENDPOINT, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+      body: JSON.stringify(data)
+    })
+      .then(function (res) {
+        if (!res.ok) throw new Error('Request failed with ' + res.status);
+        return res.json();
+      })
+      .then(function (payload) {
+        var row = payload && payload.row;
+        var tr = null;
+        var tbody = document.getElementById('reg-table-body');
+        if (row && tbody) {
+          tr = buildNikahRow(row.db_id, row.id, row);
+          tbody.insertBefore(tr, tbody.firstChild);
+        }
+        form.reset();
+        closePreview();
+        closeNikahReg();
+        // host page re-counts stats, re-applies filters and wires the row's click handler
+        document.dispatchEvent(new CustomEvent('registrations:changed', { detail: { row: tr, type: 'nikah' } }));
+      })
+      .catch(function (err) {
+        var msg = 'Could not save this registration — please check the details and try again.';
+        errorEl.textContent = msg;
+        previewErrorEl.textContent = msg;
+        console.error(err);
+      })
+      .finally(function () {
+        [saveBtn, submitBtn].forEach(function (b) { b.disabled = false; });
+        submitBtn.innerHTML = submitHtml;
+      });
+  }
+
+  document.getElementById('nikah-new-reg-save').addEventListener('click', saveNikah);
+  document.getElementById('nikah-cert-confirm-save-btn').addEventListener('click', saveNikah);
+
+  // ---------- boot ----------
+  updateProgress();
+  loadNikahTemplate(); // warm the template image so Preview opens instantly
+  }) ();
+</script>

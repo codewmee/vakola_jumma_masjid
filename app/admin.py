@@ -472,3 +472,63 @@ def urdu_transliterate():
             # Transient overload on Google's side, not a quota problem.
             return jsonify({"error": "overloaded", "retry_after": 8}), 503
         return jsonify({"error": "urdu_failed"}), 502
+    
+    
+   # ── Paste into app/admin.py (replaces the old int-based certificate route) ──
+import io
+from flask import abort, send_file
+from app.services.certificate_pdf import render_nikah_certificate_pdf
+
+
+@admin_bp.route("/registrations/<string:reg_id>/certificate.pdf")
+@login_required
+def nikah_certificate_pdf(reg_id):
+    # accepts the dashboard's "nikah-12" id (or a bare "12")
+    kind, _, num = reg_id.rpartition("-")
+    if kind and kind != "nikah":
+        abort(404)
+    try:
+        numeric_id = int(num)
+    except ValueError:
+        abort(404)
+
+    record = NikahApplication.query.get_or_404(numeric_id)
+
+    try:
+        pdf_bytes = render_nikah_certificate_pdf(record)
+    except FileNotFoundError as exc:
+        current_app.logger.error("Certificate PDF failed: %s", exc)
+        abort(500, description=str(exc))
+
+    download = request.args.get("download") == "1"      # inline = open/print, download=1 = save
+    return send_file(
+        io.BytesIO(pdf_bytes),
+        mimetype="application/pdf",
+        as_attachment=download,
+        download_name=f"nikah-nama-{record.sanad_no or record.id}.pdf",
+    )
+
+
+# ── admin_registrations.html ────────────────────────────────────────────────
+# 1) In #detail-modal .modal-actions, after the Print button:
+#
+#   <button type="button" class="btn-glass btn-glass--gold" id="modal-download-pdf-btn">
+#     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+#       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/>
+#     </svg> Download PDF
+#   </button>
+#
+# 2) In openModal(row), after the status-select line:
+#
+#   var pdfUrl = '/admin/registrations/' + encodeURIComponent(row.dataset.dbid) + '/certificate.pdf';
+#   var dl = document.getElementById('modal-download-pdf-btn');
+#   dl.style.display = isNikah ? '' : 'none';
+#   dl.onclick = function () { window.location.href = pdfUrl + '?download=1'; };
+#
+# 3) Make Print open the real certificate for nikah rows. At the top of the
+#    #modal-print-btn click handler:
+#
+#   if (activeRow && activeRow.dataset.type === 'nikah') {
+#     window.open('/admin/registrations/' + encodeURIComponent(activeRow.dataset.dbid) + '/certificate.pdf', '_blank');
+#     return;
+#   }
