@@ -1,12 +1,14 @@
 <script>
 /* NikahPaper.render(data) -> HTML string of the whole Nikah Nama.  NikahPaper.fit(root) -> shrink-to-fit pass.
-   Shared by the live preview and the PDF page, so both always match. */
+   Every field below is positioned with left/top/width/height in % of the full
+   1024x1536 paper — those numbers were read directly off the reference image
+   (not eyeballed), so this lines up with it field-for-field. Re-measure and
+   adjust the numbers in F(...) calls if the reference or the paper's aspect
+   ratio ever changes. */
 window.NikahPaper = (function () {
   'use strict';
 
-  var REG_NO = 'B-191-1952-Bom.';
-  var TRUST_EN = 'Jama Masjid Vakola (Trust) Santacruz (E), Mumbai - 400055';
-  var TRUST_UR = 'جامع مسجد وکولہ (ٹرسٹ) سانتاکروز (ایسٹ) ممبئی ۴۰۰۰۵۵';
+  var MOSQUE_URL = {{ url_for('static', filename='nikha/mosque_top.png') | tojson }};
 
   var URDU_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
   var URDU_MONTHS = ['جنوری','فروری','مارچ','اپریل','مئی','جون','جولائی','اگست','ستمبر','اکتوبر','نومبر','دسمبر'];
@@ -33,140 +35,170 @@ window.NikahPaper = (function () {
     return { en: h12 + ':' + m[2] + ' ' + (h < 12 ? 'AM' : 'PM'), ur: ud(h12 + ':' + m[2]) + ' ' + part };
   }
 
-  // two-line value box (English over Urdu) inside a labelled group
-  function stack(en, ur, fs) {
-    var e = txt(en).trim(), u = txt(ur).trim();
-    return '<div class="v nk-fit" data-fs="' + fs + '">' +
-      (e ? '<span>' + esc(e) + '</span>' : '') +
-      (u ? '<span class="ur">' + esc(u) + '</span>' : '') + '</div>';
+  // absolutely-positioned field, in % of the paper. dataFs turns on the
+  // shrink-to-fit pass (fit()) with that starting cqw size.
+  function F(l, t, w, h, inner, cls, dataFs) {
+    return '<div class="nk-f ' + (cls || '') + '"' + (dataFs ? ' data-fs="' + dataFs + '"' : '') +
+      ' style="left:' + l + '%;top:' + t + '%;width:' + w + '%;height:' + h + '%">' + inner + '</div>';
   }
-  function single(text, fs, extra) {
-    return '<div class="v big nk-fit ' + (extra || '') + '" data-fs="' + fs + '">' + esc(text) + '</div>';
-  }
-  function grp(valueHtml, urLabel) {
-    return '<div class="c"><div class="grp">' + valueHtml + '<span class="lb">' + urLabel + '</span></div></div>';
-  }
+  function hline(t) { return F(3.91, t, 92.68, 0, '', 'nk-hline'); }
+  function vline(l, t, h) { return F(l, t, 0, h, '', 'nk-vline'); }
 
-  function col(kind, main, sub, solo) {
+  function label(l, t, w, h, en, ur) {
+    return F(l, t, w, h, '<span>' + en + '</span><span class="ur" lang="ur">' + ur + '</span>', 'nk-lbl');
+  }
+  function vbox(l, t, w, h, inner, fs) {
+    return F(l, t, w, h, inner, 'nk-vbox nk-fit', fs);
+  }
+  function bi(main, sub) {
     var m = txt(main).trim(), s = txt(sub).trim();
-    if (!m && !s) return '';
-    return '<div class="col ' + kind + (solo ? ' solo' : '') + '">' +
-      (m ? '<b>' + esc(m) + '</b>' : '') + (s ? '<span>' + esc(s) + '</span>' : '') + '</div>';
+    return (m ? '<b>' + esc(m) + '</b>' : '') + (s ? '<span class="ur">' + esc(s) + '</span>' : '');
   }
-  function pair(fs, name, nameUr, enSub, urSub) {
-    var hasUr = txt(nameUr).trim() || txt(urSub).trim();
-    return '<div class="c val nk-fit" data-fs="' + fs + '">' +
-      col('en', name, enSub, !hasUr) + (hasUr ? col('ur', nameUr, urSub) : '') + '</div>';
-  }
-  function person(name, nameUr, age, addr, addrUr) {
-    var a = txt(age).trim();
-    var enSub = [a ? ('Age ' + a) : '', txt(addr).trim()].filter(Boolean).join(' · ');
-    var urSub = [a ? ('عمر ' + ud(a) + ' سال') : '', txt(addrUr).trim()].filter(Boolean).join(' · ');
-    return pair(1.45, name, nameUr, enSub, urSub);
-  }
-  function lab(ur, en) {
-    return '<div class="c lab"><span class="ur">' + ur + '</span><span class="en">' + en + '<br>Age &amp; Address</span></div>';
-  }
-  function prow(urLabel, enLabel, valueHtml) {
-    return '<div class="r p"><div class="c sig"><i></i></div>' + valueHtml + lab(urLabel, enLabel) + '</div>';
-  }
-  function ck(on) { return '<i class="ck' + (on ? ' on' : '') + '"></i>'; }
 
-  function qline(label, inner, cls, fs) {
-    return '<div class="qline"><span class="l">' + label + '</span>' +
-      '<div class="v2 nk-fit ' + (cls || '') + '" data-fs="' + fs + '">' + inner + '</div></div>';
+  // ---------- header ----------
+  function renderArch() {
+    var d =
+      'M45,428 L170,428 ' +
+      'C195,428 195,390 195,320 ' +
+      'C195,250 195,220 240,180 ' +
+      'C290,150 340,120 400,100 ' +
+      'C450,90 480,85 512,85 ' +
+      'C544,85 574,90 624,100 ' +
+      'C684,120 734,150 784,180 ' +
+      'C829,220 829,250 829,320 ' +
+      'C829,390 829,428 854,428 ' +
+      'L979,428';
+    return '' +
+      '<div class="nk-f nk-arch">' +
+        '<svg viewBox="0 0 1024 430" preserveAspectRatio="none"><path d="' + d + '" fill="none" stroke="#b8862f" stroke-width="3.2"/></svg>' +
+        '<img class="mosque" src="' + MOSQUE_URL + '" alt="">' +
+        '<div class="bism" lang="ur">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>' +
+        '<div class="verse l">' +
+          '<span class="ar" lang="ar">وَخَلَقْنَاكُمْ أَزْوَاجًا</span>' +
+          '<span class="ref">(القرآن ٧٨:٨)</span>' +
+        '</div>' +
+        '<div class="verse r">' +
+          '<span class="ar" lang="ar">لِّتَسْكُنُوٓا۟ إِلَيْهَا</span>' +
+          '<span class="ref">(القرآن ٣٠:٢١)</span>' +
+        '</div>' +
+        '<div class="t-ur" lang="ur">نکاح نامہ</div>' +
+        '<div class="t-en">NIKAH NAMA</div>' +
+        '<div class="divider">❖ &nbsp; ❖ &nbsp; ❖</div>' +
+        '<div class="sub-ur" lang="ur">عقد نکاح</div>' +
+        '<div class="sub-en">Marriage Contract</div>' +
+      '</div>';
+  }
+
+  // ---------- top info: date / location / serial ----------
+  function renderTopInfo(d) {
+    var dt = parseDay(d.nikah_date);
+    var numDate = dt ? pad2(dt.getDate()) + '/' + pad2(dt.getMonth() + 1) + '/' + dt.getFullYear() : '';
+    var enDay = dt ? dt.toLocaleDateString('en-US', { weekday: 'long' }) : '';
+    var tm = timeBoth(d.nikah_time);
+    var serial = [d.jild_no ? ('Vol. ' + txt(d.jild_no)) : '', d.sanad_no ? ('No. ' + txt(d.sanad_no)) : '']
+      .filter(Boolean).join('  /  ');
+
+    return '' +
+      label(3.91, 27.86, 30.76, 1.82, 'Nikah Date', 'تاریخ نکاح') +
+      vbox(3.91, 29.95, 30.76, 2.73, bi(numDate, [enDay, tm.en].filter(Boolean).join(' · ')), 1.15) +
+      label(37.60, 27.86, 32.23, 1.82, 'Nikah Location', 'نکاح کی جگہ') +
+      vbox(37.60, 29.95, 32.23, 2.73, bi(d.nikah_location, d.nikah_location_ur), 1.15) +
+      label(72.75, 27.86, 20.51, 1.82, 'Serial No.', 'سلسلہ نمبر') +
+      vbox(72.75, 29.95, 20.51, 2.73, bi(serial), 1.15) +
+      vline(35.64, 27.34, 5.54) + vline(71.29, 27.34, 5.54) +
+      hline(32.88);
+  }
+
+  // ---------- groom / bride party ----------
+  function renderParty(topBase, enLabel, urLabel, name, nameUr, age, addr, addrUr, dividerAfter) {
+    var t = topBase;
+    return '' +
+      F(4.39, t, 17.09, 11.39, '<div class="nk-medal"><span class="en">' + enLabel + '</span><span class="ur" lang="ur">' + urLabel + '</span></div>') +
+      label(22.46, t + 0.32, 70.80, 1.30, 'Full Name of ' + enLabel, 'نام') +
+      vbox(22.46, t + 1.82, 70.80, 2.28, bi(name, nameUr), 1.3) +
+      label(22.46, t + 4.56, 13.67, 1.43, 'Age', 'عمر') +
+      vbox(22.46, t + 6.18, 13.67, 2.47, bi(age, age ? 'عمر ' + ud(age) : ''), 1.15) +
+      label(38.09, t + 4.56, 55.18, 1.43, 'Address', 'پتہ') +
+      vbox(38.09, t + 6.18, 55.18, 2.47, bi(addr, addrUr), 1.1) +
+      label(22.46, t + 9.11, 70.80, 1.43, "Father's Name", 'باپ کا نام') +
+      vbox(22.46, t + 10.74, 70.80, 2.47, '', 1.15) +
+      hline(dividerAfter);
+  }
+
+  // ---------- vakil / witness trio ----------
+  function renderTrio(d) {
+    function card(l, w, enLabel, urLabel, name, nameUr, age, addr, addrUr) {
+      return '' +
+        F(l, 64.65, w, 1.82, '<div class="nk-chead"><span>' + enLabel + '</span><span class="ur" lang="ur">' + urLabel + '</span></div>') +
+        label(l, 67.71, w, 1.43, 'Full Name', 'نام') +
+        vbox(l, 69.34, w, 2.47, bi(name, nameUr), 1.1) +
+        label(l, 72.27, w, 1.43, 'Age', 'عمر') +
+        vbox(l, 73.89, w, 2.47, bi(age, age ? ud(age) : ''), 1.1) +
+        label(l, 76.69, w, 1.30, 'Address', 'پتہ') +
+        vbox(l, 78.12, w, 2.08, bi(addr, addrUr), 1.0);
+    }
+    return '' +
+      card(3.91, 29.79, 'Vakil', 'وکیل', d.vakil_name, d.vakil_name_ur, d.vakil_age, d.vakil_address, d.vakil_address_ur) +
+      card(35.64, 29.79, 'Witness 1', 'گواہ اول', d.witness1_name, d.witness1_name_ur, d.witness1_age, d.witness1_address, d.witness1_address_ur) +
+      card(67.38, 28.81, 'Witness 2', 'گواہ دوم', d.witness2_name, d.witness2_name_ur, d.witness2_age, d.witness2_address, d.witness2_address_ur) +
+      vline(34.67, 64.65, 16.28) + vline(66.41, 64.65, 16.28) +
+      hline(80.40);
+  }
+
+  // ---------- mahr row ----------
+  function renderMahr(d) {
+    var rawAmt = txt(d.maher_amount).trim();
+    var n = Number(rawAmt.replace(/,/g, ''));
+    var amount = rawAmt === '' ? '' : (isFinite(n) ? n.toLocaleString('en-IN') : rawAmt);
+    var promptOn = d.dower_type !== 'deferred';
+    function ck(on) { return '<span class="nk-ck' + (on ? ' on' : '') + '" style="width:1.4cqw;height:1.4cqw;"></span>'; }
+    function opt(l, w, on, en, ur) {
+      return F(l, 81.38, w, 1.63, '<span class="nk-ckopt" style="position:static;">' + ck(on) + en + ' <span class="ur" lang="ur">' + ur + '</span></span>');
+    }
+    return '' +
+      label(4.39, 81.05, 30.27, 1.69, 'Amount of Mahr', 'مہر کی رقم') +
+      vbox(4.39, 83.01, 30.27, 2.73, '<span style="font-weight:700;">' + (amount ? '₹ ' + esc(amount) : '') + '</span>', 1.4) +
+      opt(37.11, 17.6, !promptOn, 'Deferred Dower', 'مؤخر مہر') +
+      opt(57.13, 17.1, promptOn, 'Prompt Dower', 'فوری مہر') +
+      F(76.66, 81.38, 19.4, 1.4, '<span style="font-size:.95cqw;font-weight:600;color:#4a3d1c;">Mahr Paid <span class="ur" lang="ur">مہر ادا کردی گئی</span></span>') +
+      opt(76.66, 9, false, 'Yes', 'ہاں') +
+      F(86.91, 83.33, 9.5, 1.3, '<span class="nk-ckopt" style="position:static;">' + ck(false) + 'No <span class="ur" lang="ur">نہیں</span></span>') +
+      vline(35.64, 80.40, 5.80) +
+      hline(86.20);
+  }
+
+  // ---------- stamp / qazi / signatures ----------
+  function renderClosing(d) {
+    function sline(t, en, ur, val) {
+      return F(36.62, t, 59.57, 2.0,
+        '<div style="display:flex;align-items:baseline;gap:1cqw;height:100%;">' +
+          '<span style="flex:none;font-size:1.05cqw;font-weight:600;color:#4a3d1c;">' + en + ' <span class="ur" lang="ur">' + ur + '</span></span>' +
+          '<span class="nk-sig" style="flex:1;">' + (val ? esc(val) : '') + '</span>' +
+        '</div>');
+    }
+    var qaziName = [d.qazi_name, d.qazi_name_ur].filter(Boolean).join('  ');
+    return '' +
+      label(4.39, 87.24, 24.41, 0.91, 'Stamp', 'مہر') +
+      F(4.39, 88.22, 24.41, 7.16, '', 'nk-stamp') +
+      vline(35.64, 87.24, 8.46) +
+      sline(87.70, 'Qazi / Nikah Registrar', 'قاضی / نکاح رجسٹرار', qaziName) +
+      sline(90.70, "Groom\u2019s Signature", 'دولہا کے دستخط', '') +
+      sline(93.60, "Bride\u2019s Signature", 'دلہن کے دستخط', '') +
+      hline(95.70);
   }
 
   function render(d) {
     d = d || {};
-    var dt = parseDay(d.nikah_date);
-    var numDate = dt ? pad2(dt.getDate()) + '/' + pad2(dt.getMonth() + 1) + '/' + dt.getFullYear() : '';
-    var urDate = dt ? ud(dt.getDate()) + ' ' + URDU_MONTHS[dt.getMonth()] + ' ' + ud(dt.getFullYear()) : '';
-    var enDay = dt ? dt.toLocaleDateString('en-US', { weekday: 'long' }) : '';
-    var urDay = dt ? URDU_DAYS[dt.getDay()] : '';
-    var tm = timeBoth(d.nikah_time);
-
-    var rawAmt = txt(d.maher_amount).trim();
-    var n = Number(rawAmt.replace(/,/g, ''));
-    var amount = rawAmt === '' ? '0' : (isFinite(n) ? n.toLocaleString('en-IN') : rawAmt);
-    var promptOn = d.dower_type !== 'deferred';
-
-    var head =
-      '<div class="r nk-head">' +
-        '<svg viewBox="0 0 90.8 23" preserveAspectRatio="none" aria-hidden="true">' +
-          '<path d="M0 23V17C0 8 20 2.5 45.4 2.5S90.8 8 90.8 17V23" fill="none" stroke="#1f6b35" stroke-width=".3"/></svg>' +
-        '<div class="bis" lang="ur">بسم اللہ الرحمن الرحیم</div>' +
-        '<div class="vl" lang="ar">فمن رغب عن سنتی فلیس منی</div>' +
-        '<div class="vr" lang="ar">النکاح من سنتی</div>' +
-        '<div class="t-ur" lang="ur">سند نکاح</div>' +
-        '<div class="t-en">NIKAH NAMA</div>' +
-      '</div>';
-
-    var reg =
-      '<div class="r reg">' +
-        '<div class="c"><span><span class="ur">رجسٹریشن نمبر</span> <b>' + esc(REG_NO) + '</b></span></div>' +
-        '<div class="c"><span class="ur">' + TRUST_UR + '</span><b>' + esc(TRUST_EN) + '</b></div>' +
-      '</div>';
-
-    var numbers =
-      '<div class="r two">' +
-        grp(single(d.jild_no, 2, ''), 'جلد نمبر') +
-        grp(single(d.sanad_no, 2, ''), 'سند نمبر') +
-      '</div>';
-
-    var when =
-      '<div class="r date">' +
-        grp(stack(tm.en, tm.ur, 1.3), 'وقت') +
-        grp(stack(enDay, urDay, 1.4), 'بروز') +
-        grp(stack(numDate, urDate, 1.4), 'تاریخ') +
-      '</div>';
-
-    var loc =
-      '<div class="r p">' +
-        '<div class="c sig head"><span class="ur">دستخط یا انگوٹھا</span><span class="en">Signature or thumb</span></div>' +
-        pair(1.5, d.nikah_location, d.nikah_location_ur, '', '') +
-        '<div class="c lab"><span class="ur">مقام نکاح</span></div>' +
-      '</div>';
-
-    var people =
-      prow('اسم ناکح مع ولدیت عمر و پتہ', 'Full Name of Groom',
-        person(d.groom_name, d.groom_name_ur, d.groom_age, d.groom_address, d.groom_address_ur)) +
-      prow('اسم منکوحہ مع ولدیت عمر و پتہ', 'Full Name of Bride',
-        person(d.bride_name, d.bride_name_ur, d.bride_age, d.bride_address, d.bride_address_ur)) +
-      prow('وکیل کا نام ولدیت عمر و پتہ', 'Full Name of Vakil',
-        person(d.vakil_name, d.vakil_name_ur, d.vakil_age, d.vakil_address, d.vakil_address_ur)) +
-      prow('گواہ اول کا نام ولدیت عمر و پتہ', 'Full Name of Witness 1',
-        person(d.witness1_name, d.witness1_name_ur, d.witness1_age, d.witness1_address, d.witness1_address_ur)) +
-      prow('گواہ دوم کا نام ولدیت عمر و پتہ', 'Full Name of Witness 2',
-        person(d.witness2_name, d.witness2_name_ur, d.witness2_age, d.witness2_address, d.witness2_address_ur));
-
-    var maher =
-      '<div class="r p">' +
-        '<div class="c mv"><span class="rs">₹</span><div class="v nk-fit" data-fs="1.9">' + esc(amount) + '</div></div>' +
-        '<div class="c mm"><span>AMOUNT OF MAHER</span>' +
-          '<label>' + ck(!promptOn) + 'DEFERRED DOWER</label><label>' + ck(promptOn) + 'PROMPT DOWER</label></div>' +
-        '<div class="c mu"><span class="ur">مہر کی قسم و مقدار</span>' +
-          '<div class="cks"><label>' + ck(!promptOn) + '<span class="ur">مؤجل</span></label>' +
-          '<label>' + ck(promptOn) + '<span class="ur">معجل</span></label></div></div>' +
-      '</div>';
-
-    function bi(en, ur) {
-      var e = txt(en).trim(), u = txt(ur).trim();
-      return (e ? '<span>' + esc(e) + '</span>' : '<span></span>') + (u ? '<span class="ur">' + esc(u) + '</span>' : '');
-    }
-    var qazi =
-      '<div class="r p">' +
-        '<div class="c stamp"><div class="stbox"><span>Stamp</span><span class="ur">مہر</span></div></div>' +
-        '<div class="c qm">' +
-          qline('Full Name of Qazi', bi(d.qazi_name, d.qazi_name_ur), '', 1.4) +
-          qline('Address', bi(d.qazi_address, d.qazi_address_ur), '', 1.3) +
-          qline('Signature', esc(d.qazi_signature), 'sign', 2.1) +
-        '</div>' +
-        '<div class="c qu"><span class="ur">قاضی کا نام</span><span class="ur">پتہ</span><span class="ur">قاضی کے دستخط</span></div>' +
-      '</div>';
-
-    return '<div class="nk-paper"><div class="nk-frame"></div><div class="nk-body">' +
-      head + reg + numbers + when + loc + people + maher + qazi + '</div></div>';
+    return '<div class="nk-paper"><div class="nk-static"></div><div class="nk-body">' +
+      renderArch() +
+      renderTopInfo(d) +
+      renderParty(33.53, 'Groom', 'دولہا', d.groom_name, d.groom_name_ur, d.groom_age, d.groom_address, d.groom_address_ur, 46.88) +
+      renderParty(47.85, 'Bride', 'دلہن', d.bride_name, d.bride_name_ur, d.bride_age, d.bride_address, d.bride_address_ur, 60.88) +
+      renderTrio(d) +
+      renderMahr(d) +
+      renderClosing(d) +
+      '<div class="nk-blessing">❖ May Allah Bless This Union ❖<span class="ur" lang="ur">اللہ اس رشتہ کو بابرکت بنائے</span></div>' +
+    '</div></div>';
   }
 
   // shrink any box whose text does not fit, in small steps

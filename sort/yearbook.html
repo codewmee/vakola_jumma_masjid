@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yearbook</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500;600&display=swap" rel="stylesheet">
+
+<style>
+
+/* ===== RESET ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Inter", sans-serif;
+  background: radial-gradient(circle at top, #1a1a2e, #0f0f0f);
+  color: white;
+}
+
+/* ===== NAVBAR ===== */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  padding: 20px 40px;
+  backdrop-filter: blur(10px);
+  background: rgba(255,255,255,0.05);
+}
+
+.profile {
+  cursor: pointer;
+  position: relative;
+}
+
+.dropdown {
+  position: absolute;
+  top: 35px;
+  right: 0;
+  background: #111;
+  border-radius: 10px;
+  display: none;
+}
+
+.dropdown div {
+  padding: 10px 15px;
+  cursor: pointer;
+}
+
+.dropdown div:hover {
+  background: #222;
+}
+
+/* ===== GRID ===== */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 300px);
+  gap: 30px;
+  padding: 40px;
+  justify-content: center;
+}
+
+/* ===== CARD ===== */
+.card {
+  perspective: 1200px;
+}
+
+.inner {
+  width: 300px;
+  height: 400px;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.7s cubic-bezier(.4,2,.6,1);
+}
+
+.card:hover .inner {
+  transform: rotateY(180deg) scale(1.03);
+}
+
+/* Glass */
+.front, .back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 20px;
+  padding: 15px;
+  backface-visibility: hidden;
+
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+/* ===== IMAGE ===== */
+.image-wrap {
+  position: relative;
+  width: 100%;
+  height: 70%;
+  overflow: hidden;
+  border-radius: 15px;
+}
+
+.image-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+/* Gradient overlay */
+.image-wrap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+  opacity: 0;
+  transition: 0.4s;
+}
+
+/* Overlay text */
+.overlay-text {
+  position: absolute;
+  bottom: -60px;
+  left: 15px;
+  right: 15px;
+  transition: 0.4s ease;
+}
+
+.overlay-text h3 {
+  color: #ffd700;
+  font-size: 20px;
+}
+
+.overlay-text p {
+  font-size: 13px;
+  color: #ddd;
+}
+
+/* Hover effects */
+.card:hover .image-wrap img {
+  transform: scale(1.1);
+}
+
+.card:hover .image-wrap::after {
+  opacity: 1;
+}
+
+.card:hover .overlay-text {
+  bottom: 15px;
+}
+
+/* Title */
+.card-title {
+  padding-top: 10px;
+  font-size: 14px;
+  color: #aaa;
+}
+
+/* Back */
+.back {
+  transform: rotateY(180deg);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Edit */
+.edit-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: none;
+}
+
+.card:hover .edit-btn {
+  display: block;
+}
+
+/* ===== MODAL ===== */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.hidden {
+  display: none;
+}
+
+.modal-content {
+  width: 85%;
+  height: 85%;
+  display: flex;
+  background: #111;
+  border-radius: 20px;
+}
+
+.modal-left {
+  width: 40%;
+  padding: 20px;
+}
+
+.modal-left img {
+  width: 100%;
+  border-radius: 15px;
+}
+
+.modal-right {
+  width: 60%;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Chat */
+#chat {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.msg {
+  background: #222;
+  padding: 10px;
+  border-radius: 10px;
+  margin: 5px;
+  max-width: 70%;
+}
+
+.msg.outgoing {
+  margin-left: auto;
+  background: linear-gradient(135deg, #6c63ff, #4b47d1);
+}
+
+.chat-input {
+  display: flex;
+  gap: 10px;
+}
+
+.chat-input input {
+  flex: 1;
+  padding: 10px;
+  border-radius: 10px;
+  border: none;
+}
+
+.chat-input button {
+  padding: 10px;
+  border: none;
+  background: #444;
+  color: white;
+}
+
+.close {
+  position: absolute;
+  top: 20px;
+  right: 30px;
+  cursor: pointer;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="navbar">
+  <div>Yearbook</div>
+  <div class="profile" onclick="toggleDropdown()">
+    Abdur ⌄
+    <div id="dropdown" class="dropdown">
+      <div>Manage</div>
+      <div>Sign Out</div>
+    </div>
+  </div>
+</div>
+
+<div id="grid" class="grid"></div>
+
+<!-- MODAL -->
+<div id="modal" class="modal hidden">
+  <div class="modal-content">
+    <span class="close" onclick="closeModal()">×</span>
+
+    <div class="modal-left">
+      <img id="modal-img">
+      <h2 id="modal-name"></h2>
+      <p id="modal-title"></p>
+    </div>
+
+    <div class="modal-right">
+      <div id="chat"></div>
+
+      <div class="chat-input">
+        <input id="msgInput" placeholder="Say something...">
+        <button onclick="addMessage()">Send</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+
+/* ===== DATA ===== */
+let users = [
+  {
+    name: "Abdur",
+    title: "Future Google Dev",
+    img: "https://via.placeholder.com/300",
+    messages: ["Future billionaire 💸"]
+  },
+  {
+    name: "Aman",
+    title: "Creative Designer",
+    img: "https://via.placeholder.com/300",
+    messages: ["Design king 🔥"]
+  }
+];
+
+let currentUser;
+
+/* ===== GRID ===== */
+function render() {
+  const grid = document.getElementById("grid");
+  grid.innerHTML = "";
+
+  users.forEach((u, i) => {
+    grid.innerHTML += `
+    <div class="card">
+      <div class="inner">
+
+        <div class="front">
+          <button class="edit-btn">✏️</button>
+
+          <div class="image-wrap">
+            <img src="${u.img}">
+            <div class="overlay-text">
+              <h3>${u.name}</h3>
+              <p>${u.title}</p>
+            </div>
+          </div>
+
+          <div class="card-title">${u.title}</div>
+        </div>
+
+        <div class="back" onclick="openModal(${i})">
+          Open Yearbook →
+        </div>
+
+      </div>
+    </div>
+    `;
+  });
+}
+
+render();
+
+/* ===== MODAL ===== */
+function openModal(i) {
+  currentUser = i;
+  const u = users[i];
+
+  modal.classList.remove("hidden");
+  modalImg.src = u.img;
+  modalName.innerText = u.name;
+  modalTitle.innerText = u.title;
+
+  renderChat();
+}
+
+function closeModal() {
+  modal.classList.add("hidden");
+}
+
+/* ===== CHAT ===== */
+function renderChat() {
+  chat.innerHTML = "";
+
+  users[currentUser].messages.forEach(m => {
+    chat.innerHTML += `<div class="msg">${m}</div>`;
+  });
+
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function addMessage() {
+  const text = msgInput.value.trim();
+  if (!text) return;
+
+  users[currentUser].messages.push(text);
+  msgInput.value = "";
+
+  renderChat();
+}
+
+/* ===== UI ===== */
+function toggleDropdown() {
+  dropdown.style.display =
+    dropdown.style.display === "block" ? "none" : "block";
+}
+
+window.onclick = e => {
+  if (e.target === modal) closeModal();
+};
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Enter") addMessage();
+});
+
+</script>
+
+</body>
+</html>
