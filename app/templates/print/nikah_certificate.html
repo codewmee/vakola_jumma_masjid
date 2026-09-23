@@ -5,19 +5,22 @@
 <title>Nikah Nama — {{ data.sanad_no or '' }}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=EB+Garamond:ital,wght@1,500&family=Noto+Nastaliq+Urdu:wght@400;500;600&family=Scheherazade+New:wght@500;600&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
-{% include "nikah/_paper_css.html" %}
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=EB+Garamond:ital,wght@0,500;0,600;1,500&family=Noto+Nastaliq+Urdu:wght@400;500;600&family=Scheherazade+New:wght@500;600&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
+{% include "_paper_css.html" %}
 <style>
-  @page { size: A4; margin: 8mm; }
+  /* Foolscap (8.5in x 13.5in / 215.9mm x 342.9mm) instead of A4 */
+  @page { size: 215.9mm 342.9mm; margin: 8mm; }
   html, body { margin: 0; padding: 0; background: #fff; }
-  /* A4 minus 8mm margins = 194 x 281mm; 280.5 keeps it safely on one page */
-  .nk-paper { width: 194mm; height: 280.5mm; aspect-ratio: auto; box-shadow: none; }
+  /* Content area is 199.9mm x 326.9mm after margins. Foolscap's ratio (~0.611)
+     isn't the design's 2:3 (0.667), so width-fit and let height fall short of
+     the page rather than stretching the 1024x1536 layout out of proportion. */
+  .nk-paper { width: 199.9mm; height: 299.85mm; aspect-ratio: auto; box-shadow: none; margin: 0 auto; }
 </style>
 </head>
 <body>
 <div id="cert-root"></div>
 <script id="cert-data" type="application/json">{{ data | tojson }}</script>
-{% include "nikah/_paper_js.html" %}
+{% include "_paper_js.html" %}
 <script>
 (function () {
   var d = JSON.parse(document.getElementById('cert-data').textContent);

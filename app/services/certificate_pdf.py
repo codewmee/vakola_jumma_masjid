@@ -54,7 +54,8 @@ def render_nikah_certificate_pdf(record) -> bytes:
             page.set_content(html, wait_until="load")
             page.wait_for_selector('body[data-ready="1"]', timeout=20000)
             return page.pdf(
-                format="A4",
+                width="215.9mm",   # foolscap, 8.5in x 13.5in
+                height="342.9mm",
                 print_background=True,
                 margin={"top": "8mm", "bottom": "8mm", "left": "8mm", "right": "8mm"},
             )
