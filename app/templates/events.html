@@ -1,0 +1,902 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .page {
+        overflow-x: clip;
+    }
+
+    /* ── Hero carousel ── */
+    .ev-hero {
+        position: relative;
+        min-height: min(90vh, 780px);
+        overflow: hidden;
+    }
+
+    .ev-slides {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+    }
+
+    .ev-slide {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        transition: opacity .9s ease;
+    }
+
+    .ev-slide.is-active {
+        opacity: 1;
+    }
+
+    .ev-slide img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .ev-hero .hero-content {
+        position: relative;
+        z-index: 3;
+    }
+
+    .ev-caption {
+        margin: 1.25rem 0 0;
+        font-size: .95rem;
+        opacity: .9;
+        min-height: 1.4em;
+    }
+
+    /* ── Gallery: full-bleed, edge to edge ── */
+    .ev-gallery {
+        padding: 5rem 0 4.5rem;
+        overflow: hidden;
+    }
+
+    .ev-gallery-head {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 0 1.25rem;
+    }
+
+    .ev-hint {
+        text-align: center;
+        color: #6b6b6b;
+        margin: -.5rem 0 0;
+        font-size: 1rem;
+    }
+
+    .ev-marquee {
+        padding: 5.5rem 0 2.5rem;
+    }
+
+    .ev-track {
+        display: flex;
+        width: max-content;
+        animation: ev-scroll var(--dur, 60s) linear infinite;
+    }
+
+    .ev-marquee:hover .ev-track,
+    .ev-marquee:focus-within .ev-track {
+        animation-play-state: paused;
+    }
+
+    .ev-group {
+        display: flex;
+        gap: 4rem;
+        padding-right: 4rem;
+    }
+
+    @keyframes ev-scroll {
+        from {
+            transform: translateX(0);
+        }
+
+        to {
+            transform: translateX(-50%);
+        }
+    }
+
+    .ev-tile {
+        flex: 0 0 auto;
+        width: clamp(300px, 30vw, 460px);
+        border: 0;
+        padding: 0;
+        background: none;
+        cursor: pointer;
+        text-align: left;
+        display: flex;
+        flex-direction: column;
+        gap: 1.1rem;
+        transition: transform .4s cubic-bezier(.34, 1.56, .64, 1);
+    }
+
+    .ev-tile-frame {
+        position: relative;
+        display: block;
+        isolation: isolate;
+    }
+
+    .ev-tile-frame::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: 22px;
+        z-index: -1;
+        background: rgba(31, 58, 46, .06);
+        transform: translate(10px, -10px);
+        transition: transform .4s cubic-bezier(.34, 1.56, .64, 1);
+    }
+
+    .ev-tile-img {
+        display: block;
+        aspect-ratio: 4/3;
+        border-radius: 20px;
+        overflow: hidden;
+        background: #d9d2c0;
+        box-shadow: 0 6px 18px rgba(20, 30, 25, .1);
+        transition: box-shadow .4s ease;
+    }
+
+    .ev-tile-img img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .ev-tile-cap {
+        display: block;
+        padding-left: .2rem;
+    }
+
+    .ev-tile-cap b {
+        display: block;
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #1d2320;
+        line-height: 1.3;
+    }
+
+    .ev-tile-cap small {
+        display: block;
+        margin-top: .2rem;
+        font-size: .92rem;
+        color: #6b6b6b;
+    }
+
+    .ev-tile:hover,
+    .ev-tile:focus-visible {
+        transform: translateY(-8px) scale(1.05);
+        z-index: 2;
+    }
+
+    .ev-tile:hover .ev-tile-frame::before,
+    .ev-tile:focus-visible .ev-tile-frame::before {
+        transform: translate(14px, -14px);
+    }
+
+    .ev-tile:hover .ev-tile-img,
+    .ev-tile:focus-visible .ev-tile-img {
+        box-shadow: 0 20px 40px rgba(20, 30, 25, .22);
+    }
+
+    .ev-tile:focus-visible,
+    .ev-actions .btn:focus-visible {
+        outline: 3px solid var(--gold-600, #c9962e);
+        outline-offset: 4px;
+    }
+
+    .ev-empty {
+        padding: 2rem;
+        text-align: center;
+        color: #6b6b6b;
+        border: 1px dashed rgba(0, 0, 0, .2);
+        border-radius: 14px;
+        margin: 2rem auto;
+        max-width: 600px;
+    }
+
+    /* ── Highlights: scroll-driven parallax (sticky stage) ── */
+    .ev-hl-wrap {
+        position: relative;
+    }
+
+    .ev-hl {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        overflow: hidden;
+        background: #101512;
+        color: #fff;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .ev-hl-slides {
+        position: absolute;
+        inset: 0;
+    }
+
+    .ev-hl-slide {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+        will-change: transform;
+    }
+
+    .ev-hl-slide img {
+        position: absolute;
+        left: 0;
+        top: -20vh;
+        width: 100%;
+        height: calc(100% + 40vh);
+        object-fit: cover;
+        display: block;
+        will-change: transform;
+    }
+
+    .ev-hl-slide::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        pointer-events: none;
+        background: linear-gradient(180deg, rgba(8, 12, 10, .6) 0%, rgba(8, 12, 10, .1) 38%, rgba(8, 12, 10, .78) 100%);
+    }
+
+    .ev-hl-cap {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 2;
+        padding: 0 clamp(1.25rem, 5vw, 4.5rem) 3rem;
+    }
+
+    .ev-hl-head,
+    .ev-hl-foot {
+        position: relative;
+        z-index: 60;
+        padding: 0 clamp(1.25rem, 5vw, 4.5rem);
+    }
+
+    .ev-hl-head {
+        padding-top: 4.5rem;
+        text-align: center;
+    }
+
+    .ev-hl-arabic {
+        margin: 0;
+        font-size: 1.3rem;
+        opacity: .9;
+    }
+
+    .ev-hl-title {
+        margin: .35rem 0 0;
+        font-size: clamp(2rem, 5vw, 3.25rem);
+        line-height: 1.1;
+    }
+
+    .ev-hl-rule {
+        width: 64px;
+        height: 2px;
+        background: var(--gold-600, #c9962e);
+        margin: 1.1rem auto 0;
+    }
+
+    .ev-hl-foot {
+        padding-bottom: 3rem;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .ev-hl-event {
+        margin: 0;
+        font-size: clamp(1.4rem, 3vw, 2.1rem);
+        font-weight: 600;
+    }
+
+    .ev-hl-date {
+        margin: .35rem 0 0;
+        font-size: 1rem;
+        opacity: .85;
+    }
+
+    .ev-hl-count {
+        font-size: 1rem;
+        letter-spacing: .08em;
+        opacity: .85;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+    }
+
+    .ev-hl-progress {
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        height: 3px;
+        width: 0;
+        background: var(--gold-600, #c9962e);
+        z-index: 61;
+    }
+
+    /* ── Pop-up viewer ── */
+    .ev-meta {
+        font-size: .88rem;
+        color: #6b6b6b;
+        margin: 0;
+    }
+
+    .ev-viewer {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        background: rgba(10, 14, 12, .78);
+        -webkit-backdrop-filter: blur(6px);
+        backdrop-filter: blur(6px);
+    }
+
+    .ev-viewer.is-open {
+        display: flex;
+    }
+
+    .ev-viewer-card {
+        position: relative;
+        background: #fff;
+        border-radius: 18px;
+        overflow: hidden;
+        width: min(920px, 100%);
+        max-height: 92vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 30px 80px rgba(0, 0, 0, .5);
+        animation: ev-pop .5s cubic-bezier(.34, 1.56, .64, 1);
+    }
+
+    @keyframes ev-pop {
+        from {
+            opacity: 0;
+            transform: scale(.6) rotate(-3deg);
+        }
+
+        to {
+            opacity: 1;
+            transform: scale(1) rotate(0);
+        }
+    }
+
+    .ev-viewer-card img {
+        width: 100%;
+        max-height: 62vh;
+        object-fit: cover;
+        display: block;
+        background: #d9d2c0;
+    }
+
+    .ev-viewer-info {
+        padding: 1.25rem 1.5rem 1.5rem;
+        overflow: auto;
+    }
+
+    .ev-viewer-info h3 {
+        margin: 0 0 .25rem;
+        font-size: 1.4rem;
+    }
+
+    .ev-viewer-info p {
+        margin: .4rem 0 0;
+    }
+
+    .ev-viewer-close {
+        position: absolute;
+        top: .75rem;
+        right: .75rem;
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        border: 0;
+        background: rgba(0, 0, 0, .55);
+        color: #fff;
+        font-size: 1rem;
+        cursor: pointer;
+        z-index: 2;
+    }
+
+    .ev-actions {
+        display: flex;
+        gap: .6rem;
+        margin-top: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .ev-actions .btn {
+        flex: 1;
+        text-align: center;
+        cursor: pointer;
+    }
+
+    .ev-actions[hidden] {
+        display: none;
+    }
+
+    /* ── Signup form ── */
+    .ev-toast {
+        margin-top: .75rem;
+        font-size: .95rem;
+    }
+
+    .ev-toast--ok {
+        color: var(--moss-700, #2f5d47);
+    }
+
+    .ev-textarea {
+        min-height: 80px;
+        resize: vertical;
+    }
+
+    @media (prefers-reduced-motion:reduce) {
+        .ev-slide {
+            transition: none;
+        }
+
+        .ev-track {
+            animation: none;
+        }
+
+        .ev-marquee {
+            overflow-x: auto;
+        }
+
+        .ev-viewer-card {
+            animation: none;
+        }
+    }
+</style>
+
+{# Collect images: upcoming events (with join buttons) and past-event highlight photos #}
+{% set fallback = "https://images.unsplash.com/photo-1540567736792-f78f6242e4e0?w=1000&h=700&fit=crop&auto=format" %}
+{% set up_items = [] %}
+{% set hl_items = [] %}
+{% for e in upcoming %}
+{% set full = e.event_date.strftime('%A, %d %B %Y') ~ ((' · ' ~ e.start_time) if e.start_time else '') ~ ((' · ' ~
+e.location) if e.location else '') %}
+{% set short = e.event_date.strftime('%a, %d %b %Y') ~ ((' · ' ~ e.location) if e.location else '') %}
+{% set _ = up_items.append({"url": e.cover_url or fallback, "title": e.title, "sub": full, "short": short, "desc":
+e.description, "id": e.id, "part": e.allow_participate, "vol": e.allow_volunteer}) %}
+{% endfor %}
+{% for e in highlights %}
+{% for p in e.photos %}
+{% set ptitle = p.title or p.caption or e.title %}
+{% set pdate = p.photo_date or e.event_date %}
+{% set _ = hl_items.append({"url": p.url, "title": ptitle, "event": ptitle, "date": pdate.strftime('%d %B %Y'), "sub":
+"Highlights · " ~ pdate.strftime('%d %B %Y'), "short": pdate.strftime('%a, %d %b %Y'), "desc": "", "id": 0, "part":
+False, "vol": False}) %}
+{% endfor %}
+{% endfor %}
+{% set items = up_items + hl_items %}
+{% set gitems = up_items if up_items else hl_items %}
+{% set n = gitems|length %}
+{% set reps = ((6 / n)|round(0, 'ceil'))|int if n else 0 %}
+
+<div class="page">
+
+    {# ─── HERO (same nav as homepage) ─── #}
+    <section class="hero ev-hero">
+        <div class="ev-slides">
+            {% if items %}
+            {% for s in items[:8] %}
+            <div class="ev-slide{{ ' is-active' if loop.first else '' }}" data-title="{{ s.title }}"
+                data-sub="{{ s.sub }}">
+                <img src="{{ s.url }}" alt="{{ s.title }}" {% if not loop.first %} loading="lazy" {% endif %} />
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="ev-slide is-active" data-title="{{ mosque_name }}" data-sub="Community events">
+                <img src="https://images.unsplash.com/photo-1781968727494-c74dd96169f6?w=1600&h=2200&fit=crop&auto=format"
+                    alt="{{ mosque_name }}" />
+            </div>
+            {% endif %}
+        </div>
+        <div class="hero-scrim"></div>
+        <div class="hero-noise"></div>
+
+        <nav class="site-nav">
+            <div class="brand">
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                    <path d="M20 6a12 12 0 1 0 0 20A10 10 0 1 1 20 6z" fill="#9a6e22" opacity="0.85" />
+                </svg>
+                <a href="/"><span class="brand-name">{{ mosque_name }}</span></a>
+            </div>
+            <div class="nav-links">
+                <a href="/#prayer-times">Prayer Times</a>
+                <a href="/#services">Services</a>
+                <a href="#contact">Contact</a>
+            </div>
+            <a href="#gallery" class="btn btn--gold nav-donate">Participate</a>
+        </nav>
+
+        <div class="hero-content">
+            <p class="bismillah">فعاليات</p>
+            <div class="hero-divider"></div>
+            <h1 class="hero-title">Community<br />Events</h1>
+            <p class="hero-title-arabic">مسجد وکولا جمعہ</p>
+            <p class="hero-date">Lectures, classes and gatherings. Join in, or lend a hand.</p>
+
+            <div class="hero-actions">
+                <a href="#gallery" class="btn btn--moss">Participate</a>
+                <a href="#gallery" class="btn btn--outline-gold">Volunteer</a>
+            </div>
+            <p class="ev-caption" id="ev-caption" aria-live="off"></p>
+        </div>
+    </section>
+
+    
+    {# ─── HIGHLIGHTS (scroll-driven parallax) ─── #}
+    {% if hl_items %}
+    {% set hn = [hl_items|length, 12]|min %}
+    <section id="highlights" class="ev-hl-wrap" style="height:calc(100vh + {{ (hn - 1) * 180 }}vh)"
+    aria-label="Event highlights">
+    <div class="ev-hl">
+        <div class="ev-hl-slides">
+            {% for s in hl_items[:12] %}
+            <div class="ev-hl-slide" style="z-index:{{ hn - loop.index0 }}">
+                <img src="{{ s.url }}" alt="{{ s.title }}" {% if not loop.first %} loading="lazy" {% endif %} />
+                <div class="ev-hl-cap">
+                    <p class="ev-hl-event">{{ s.event }}</p>
+                    <p class="ev-hl-date">{{ s.date }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <div class="ev-hl-head">
+            <p class="ev-hl-arabic">لمحات</p>
+            <h2 class="ev-hl-title">Event Highlights</h2>
+            <div class="ev-hl-rule"></div>
+        </div>
+        
+        <div class="ev-hl-foot">
+            <div class="ev-hl-count" id="ev-hl-count" aria-hidden="true"></div>
+        </div>
+        <div class="ev-hl-progress" id="ev-hl-progress"></div>
+    </div>
+</section>
+{% endif %}
+
+{# ─── EVENT GALLERY (full-width, auto-scrolling) ─── #}
+<section id="gallery" class="ev-gallery">
+    <div class="ev-gallery-head">
+        <div class="section-head">
+            <p class="section-head-arabic">معرض الفعاليات</p>
+            <h2 class="section-head-title">Events Gallery</h2>
+            <div class="section-rule"></div>
+        </div>
+        <p class="ev-hint">Select any photo to see the event and join in.</p>
+    </div>
+
+    {% if gitems %}
+    <div class="ev-marquee">
+        <div class="ev-track" style="--dur:{{ n * reps * 6 }}s">
+            {% for g in range(2) %}
+            <div class="ev-group" {% if g==1 %} aria-hidden="true" {% endif %}>
+                {% for r in range(reps) %}
+                {% for it in gitems %}
+                <button type="button" class="ev-tile" tabindex="{{ 0 if (g == 0 and r == 0) else -1 }}"
+                    data-photo="{{ it.url }}" data-title="{{ it.title }}" data-sub="{{ it.sub }}"
+                    data-desc="{{ it.desc }}" data-event-id="{{ it.id }}" data-part="{{ 1 if it.part else 0 }}"
+                    data-vol="{{ 1 if it.vol else 0 }}" aria-label="Open: {{ it.title }}">
+                    <span class="ev-tile-frame"><span class="ev-tile-img"><img src="{{ it.url }}"
+                                alt="{{ it.title }}" loading="lazy" /></span></span>
+                    <span class="ev-tile-cap"><b>{{ it.title }}</b><small>{{ it.short }}</small></span>
+                </button>
+                {% endfor %}
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div class="ev-empty">No events yet. Check back soon.</div>
+    {% endif %}
+</section>
+{# ─── FOOTER (same as homepage) ─── #}
+    <footer id="contact" class="site-footer">
+        <div class="footer-top">
+            <div class="footer-brand">
+                <p class="footer-arabic">الله أكبر</p>
+                <p class="footer-translation">Allah is the Greatest</p>
+                <p class="footer-name">{{ mosque_name }}</p>
+                <p class="footer-tagline">Serving the community with prayer, education and charity.</p>
+            </div>
+
+            <div class="footer-col">
+                <h4 class="footer-col-title">Contact</h4>
+                <ul class="footer-contact">
+                    <li>
+                        <svg class="footer-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.6">
+                            <path d="M12 21s-7-6.1-7-11.5A7 7 0 0 1 19 9.5C19 14.9 12 21 12 21z" />
+                            <circle cx="12" cy="9.5" r="2.4" />
+                        </svg>
+                        <span>{{ mosque_address }}</span>
+                    </li>
+                    <li>
+                        <svg class="footer-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.6">
+                            <path
+                                d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.3 1.8.6 2.7a2 2 0 0 1-.5 2.1L8 9.6a16 16 0 0 0 6 6l1.1-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.5 2.7.6a2 2 0 0 1 1.7 2z" />
+                        </svg>
+                        <a href="tel:{{ mosque_phone }}">{{ mosque_phone }}</a>
+                    </li>
+                    <li>
+                        <svg class="footer-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.6">
+                            <path d="M4 4h16v16H4z" />
+                            <path d="M4 6l8 7 8-7" />
+                        </svg>
+                        <a href="mailto:{{ mosque_email }}">{{ mosque_email }}</a>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="footer-col">
+                <h4 class="footer-col-title">Friday Prayer</h4>
+                <div class="footer-jummah">
+                    <div class="footer-jummah-row"><span>Khutbah</span><span>13:15</span></div>
+                    <div class="footer-jummah-row"><span>Salah</span><span>13:45</span></div>
+                </div>
+                <a href="#gallery" class="btn btn--outline-gold footer-donate-btn">Participate</a>
+            </div>
+        </div>
+
+        <div class="footer-rule"></div>
+
+        <div class="footer-bottom">
+            <p class="footer-copy">© Managed by عبد الرحمان</p>
+            <p class="footer-copy footer-copy--muted">Built with care for the community.</p>
+        </div>
+    </footer>
+</div>
+
+{# ─── POP-UP VIEWER ─── #}
+<div class="ev-viewer" id="ev-viewer" role="dialog" aria-modal="true" aria-label="Event photo">
+    <div class="ev-viewer-card">
+        <button type="button" class="ev-viewer-close" id="ev-v-close" aria-label="Close">✕</button>
+        <img id="ev-v-img" src="" alt="" />
+        <div class="ev-viewer-info">
+            <h3 id="ev-v-title"></h3>
+            <p class="ev-meta" id="ev-v-sub"></p>
+            <p id="ev-v-desc"></p>
+            <div class="ev-actions" id="ev-v-actions" hidden>
+                <button type="button" class="btn btn--gold" id="ev-v-part">Participate</button>
+                <button type="button" class="btn btn--outline-gold" id="ev-v-vol">Volunteer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ─── SIGNUP MODAL ─── #}
+<div class="modal-overlay" id="modal-signup">
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="signup-title">
+        <button type="button" data-close-modal class="modal-close" aria-label="Close">✕</button>
+        <h3 id="signup-title" class="modal-title">Register</h3>
+        <p id="signup-event" class="ev-meta" style="margin-bottom:1rem;"></p>
+        <form id="form-signup" class="form-group" novalidate>
+            <div>
+                <label class="field-label" for="su-name">Full name</label>
+                <input id="su-name" name="name" type="text" required maxlength="120" class="field-input" />
+                <p class="field-error" data-error-for="name"></p>
+            </div>
+            <div>
+                <label class="field-label" for="su-contact">Contact number</label>
+                <input id="su-contact" name="contact" type="tel" required maxlength="30" class="field-input" />
+                <p class="field-error" data-error-for="contact"></p>
+            </div>
+            <div>
+                <label class="field-label" for="su-email">Email (optional)</label>
+                <input id="su-email" name="email" type="email" maxlength="120" class="field-input" />
+                <p class="field-error" data-error-for="email"></p>
+            </div>
+            <div id="su-guests-wrap">
+                <label class="field-label" for="su-guests">Number of people</label>
+                <input id="su-guests" name="guests" type="number" min="1" max="10" value="1" class="field-input" />
+                <p class="field-error" data-error-for="guests"></p>
+            </div>
+            <div>
+                <label class="field-label" for="su-note" id="su-note-label">Note (optional)</label>
+                <textarea id="su-note" name="note" maxlength="500" class="field-input ev-textarea"></textarea>
+                <p class="field-error" data-error-for="note"></p>
+            </div>
+            <button type="submit" class="btn btn--gold form-submit" id="su-submit">Register</button>
+            <p id="su-toast" class="ev-toast" role="status"></p>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    (function () {
+        /* ── Hero carousel (automatic) ── */
+        var slides = Array.prototype.slice.call(document.querySelectorAll('.ev-slide'));
+        var caption = document.getElementById('ev-caption');
+        var idx = 0;
+        function show(i) {
+            idx = (i + slides.length) % slides.length;
+            slides.forEach(function (s, n) { s.classList.toggle('is-active', n === idx); });
+            caption.textContent = slides[idx].dataset.title + ' · ' + slides[idx].dataset.sub;
+        }
+        if (slides.length) {
+            show(0);
+            if (slides.length > 1) setInterval(function () { show(idx + 1); }, 4500);
+        }
+
+        /* ── Highlights: slow, eased scroll parallax; captions travel with their photo ── */
+        var hWrap = document.getElementById('highlights');
+        var hs = Array.prototype.slice.call(document.querySelectorAll('.ev-hl-slide'));
+        if (hWrap && hs.length) {
+            var hCount = document.getElementById('ev-hl-count');
+            var hBar = document.getElementById('ev-hl-progress');
+            var hn = hs.length, raf = null, cur = 0, shown = -1;
+            var still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            function clamp(v) { return Math.min(Math.max(v, 0), 1); }
+            function ease(x) { return x * x * (3 - 2 * x); }
+            function pad(x) { return (x < 10 ? '0' : '') + x; }
+            // Each photo rests for a moment, then eases upward, then the next rests.
+            function rise(j, t) { return ease(clamp((t - j - 0.12) / 0.76)); }
+
+            function target() {
+                var total = hWrap.offsetHeight - window.innerHeight;
+                return total > 0 ? clamp(-hWrap.getBoundingClientRect().top / total) : 0;
+            }
+
+            function draw(p) {
+                var H = window.innerHeight, t = p * (hn - 1);
+                for (var i = 0; i < hn; i++) {
+                    var k = i < hn - 1 ? rise(i, t) : 0;
+                    var kin = i > 0 ? 1 - rise(i - 1, t) : 0;
+                    hs[i].style.transform = i < hn - 1 ? 'translate3d(0,' + (-k * H) + 'px,0)' : 'none';
+                    hs[i].firstElementChild.style.transform =
+                        'translate3d(0,' + (k * 0.16 * H - kin * 0.12 * H) + 'px,0)';
+                }
+                hBar.style.width = (p * 100) + '%';
+                var idx = Math.min(hn - 1, Math.round(t));
+                if (idx !== shown) { shown = idx; hCount.textContent = pad(idx + 1) + ' / ' + pad(hn); }
+            }
+
+            function loop() {
+                var tg = target();
+                cur += (tg - cur) * 0.08;               // glide toward the scroll position
+                if (still || Math.abs(tg - cur) < 0.0004) cur = tg;
+                draw(cur);
+                raf = cur !== tg ? requestAnimationFrame(loop) : null;
+            }
+            function kick() { if (!raf) raf = requestAnimationFrame(loop); }
+
+            window.addEventListener('scroll', kick, { passive: true });
+            window.addEventListener('resize', kick);
+            cur = target();
+            draw(cur);
+        }
+
+        /* ── Pop-up viewer ── */
+        var viewer = document.getElementById('ev-viewer');
+        var vImg = document.getElementById('ev-v-img');
+        var vTitle = document.getElementById('ev-v-title');
+        var vSub = document.getElementById('ev-v-sub');
+        var vDesc = document.getElementById('ev-v-desc');
+        var vActions = document.getElementById('ev-v-actions');
+        var vPart = document.getElementById('ev-v-part');
+        var vVol = document.getElementById('ev-v-vol');
+        var viewing = { id: null, title: '' };
+
+        function openViewer(el) {
+            var d = el.dataset;
+            viewing = { id: d.eventId, title: d.title };
+            vImg.src = d.photo;
+            vImg.alt = d.title;
+            vTitle.textContent = d.title;
+            vSub.textContent = d.sub || '';
+            vDesc.textContent = d.desc || '';
+            vDesc.style.display = d.desc ? '' : 'none';
+            var canPart = d.part === '1', canVol = d.vol === '1';
+            vPart.style.display = canPart ? '' : 'none';
+            vVol.style.display = canVol ? '' : 'none';
+            vActions.hidden = !(canPart || canVol);
+            viewer.classList.add('is-open');
+        }
+        function closeViewer() { viewer.classList.remove('is-open'); }
+
+        document.querySelectorAll('.ev-tile').forEach(function (el) {
+            el.addEventListener('click', function () { openViewer(el); });
+        });
+        document.getElementById('ev-v-close').addEventListener('click', closeViewer);
+        viewer.addEventListener('click', function (e) { if (e.target === viewer) closeViewer(); });
+        vPart.addEventListener('click', function () { closeViewer(); openModal(viewing.id, 'participate', viewing.title); });
+        vVol.addEventListener('click', function () { closeViewer(); openModal(viewing.id, 'volunteer', viewing.title); });
+
+        /* ── Signup modal ── */
+        var modal = document.getElementById('modal-signup');
+        var form = document.getElementById('form-signup');
+        var toast = document.getElementById('su-toast');
+        var submitBtn = document.getElementById('su-submit');
+        var current = { id: null, kind: null };
+
+        function clearErrors() {
+            form.querySelectorAll('.field-error').forEach(function (p) { p.textContent = ''; });
+            toast.textContent = '';
+            toast.className = 'ev-toast';
+        }
+
+        function openModal(id, kind, title) {
+            current = { id: id, kind: kind };
+            var isVol = kind === 'volunteer';
+            form.reset();
+            clearErrors();
+            document.getElementById('signup-title').textContent = isVol ? 'Volunteer' : 'Participate';
+            document.getElementById('signup-event').textContent = title;
+            document.getElementById('su-guests-wrap').style.display = isVol ? 'none' : '';
+            document.getElementById('su-note-label').textContent = isVol
+                ? 'How would you like to help? (optional)'
+                : 'Note (optional)';
+            submitBtn.textContent = isVol ? 'Sign up to volunteer' : 'Register';
+            submitBtn.disabled = false;
+            modal.classList.add('is-open');
+        }
+
+        function closeModal() { modal.classList.remove('is-open'); }
+
+        modal.querySelectorAll('[data-close-modal]').forEach(function (b) {
+            b.addEventListener('click', closeModal);
+        });
+        modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
+
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            clearErrors();
+            var payload = {};
+            new FormData(form).forEach(function (v, k) { payload[k] = v; });
+            submitBtn.disabled = true;
+
+            fetch('/events/' + current.id + '/' + current.kind, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify(payload)
+            })
+                .then(function (r) { return r.json().catch(function () { return { ok: false, error: 'Something went wrong. Please try again.' }; }); })
+                .then(function (res) {
+                    if (res.ok) {
+                        toast.textContent = res.message;
+                        toast.className = 'ev-toast ev-toast--ok';
+                        setTimeout(closeModal, 2200);
+                        return;
+                    }
+                    submitBtn.disabled = false;
+                    var target = res.field && form.querySelector('[data-error-for="' + res.field + '"]');
+                    if (target) { target.textContent = res.error; }
+                    else { toast.textContent = res.error || 'Something went wrong. Please try again.'; }
+                })
+                .catch(function () {
+                    submitBtn.disabled = false;
+                    toast.textContent = 'Network error. Please try again.';
+                });
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') { closeViewer(); closeModal(); }
+        });
+    })();
+</script>
+{% endblock %}

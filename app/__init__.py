@@ -51,10 +51,12 @@ def _init_extensions(app: Flask) -> None:
 def _register_blueprints(app: Flask) -> None:
     from app.routes.main import main_bp
     from app.routes.api import api_bp
+    from app.events import events_bp
     from app.admin import admin_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp)
+    app.register_blueprint(events_bp)
     app.register_blueprint(admin_bp)
 
 
