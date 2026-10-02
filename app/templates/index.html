@@ -5,7 +5,7 @@
 
   {# ─── HERO ────────────────────────────────────────────── #}
   <section class="hero">
-    <img  src="https://images.unsplash.com/photo-1781968727494-c74dd96169f6?w=1600&h=2200&fit=crop&auto=format"
+    <img src="https://images.unsplash.com/photo-1781968727494-c74dd96169f6?w=1600&h=2200&fit=crop&auto=format"
       alt="Minaret rising through misty dawn" class="hero-bg" />
     <div class="hero-scrim"></div>
     <div class="hero-noise"></div>
@@ -37,7 +37,7 @@
       </h1>
       <p class="hero-title-arabic">مسجد وکولا جمعہ</p>
 
-     <p class="hero-date">{{ today.strftime('%A, ') }}{{ today.day }}{{ today.strftime(' %B %Y') }}</p>
+      <p class="hero-date">{{ today.strftime('%A, ') }}{{ today.day }}{{ today.strftime(' %B %Y') }}</p>
       <span id="live-clock" class="hero-clock">--:--:--</span>
 
       <div class="hero-actions">
@@ -53,7 +53,8 @@
         <div class="pulse-dot"></div>
         <div>
           <p class="eyebrow">Next Prayer</p>
-          <p class="text-cinzel" style="font-size:1.1rem;color:var(--moss-700);margin:0;">{{ next_prayer.name }} · {{ next_prayer.time }}</p>
+          <p class="text-cinzel" style="font-size:1.1rem;color:var(--moss-700);margin:0;">{{ next_prayer.name }} · {{
+            next_prayer.time }}</p>
         </div>
         <div class="next-prayer-divider"></div>
         <div>
@@ -169,8 +170,8 @@
         {% set pct = (jumma.percent if jumma is defined and jumma else 0) | float %}
         {% set pct = [[pct, 0] | max, 100] | min %}
         <div class="progress-track">
-          <div class="progress-fill" data-percent="{{ pct }}"
-            role="progressbar" aria-valuenow="{{ pct | round(0) | int }}" aria-valuemin="0" aria-valuemax="100"></div>
+          <div class="progress-fill" data-percent="{{ pct }}" role="progressbar"
+            aria-valuenow="{{ pct | round(0) | int }}" aria-valuemin="0" aria-valuemax="100"></div>
         </div>
         <p class="goal-caption">{{ jumma.this_month }} raised of {{ jumma.goal }} target</p>
       </div>
@@ -208,7 +209,8 @@
       </div>
       {% endfor %}
       <a href="/events" class="service-card">
-        <img src="https://images.unsplash.com/photo-1600298881974-6be191ceeda1?w=600&h=400&fit=crop&auto=format" alt="Community gathering" class="service-img" />
+        <img src="https://images.unsplash.com/photo-1600298881974-6be191ceeda1?w=600&h=400&fit=crop&auto=format"
+          alt="Community gathering" class="service-img" />
         <div class="service-scrim"></div>
         <div class="service-body">
           <p class="service-arabic">فعاليات</p>
@@ -250,20 +252,29 @@
         <p class="footer-tagline">Serving the community with prayer, education and charity.</p>
       </div>
 
-     
+
       <div class="footer-col">
         <h4 class="footer-col-title">Contact</h4>
         <ul class="footer-contact">
           <li>
-            <svg class="footer-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21s-7-6.1-7-11.5A7 7 0 0 1 19 9.5C19 14.9 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/></svg>
+            <svg class="footer-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+              <path d="M12 21s-7-6.1-7-11.5A7 7 0 0 1 19 9.5C19 14.9 12 21 12 21z" />
+              <circle cx="12" cy="9.5" r="2.4" />
+            </svg>
             <span>{{ mosque_address }}</span>
           </li>
           <li>
-            <svg class="footer-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.3 1.8.6 2.7a2 2 0 0 1-.5 2.1L8 9.6a16 16 0 0 0 6 6l1.1-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.5 2.7.6a2 2 0 0 1 1.7 2z"/></svg>
+            <svg class="footer-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+              <path
+                d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.3 1.8.6 2.7a2 2 0 0 1-.5 2.1L8 9.6a16 16 0 0 0 6 6l1.1-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.5 2.7.6a2 2 0 0 1 1.7 2z" />
+            </svg>
             <a href="tel:{{ mosque_phone }}">{{ mosque_phone }}</a>
           </li>
           <li>
-            <svg class="footer-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 4h16v16H4z"/><path d="M4 6l8 7 8-7"/></svg>
+            <svg class="footer-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+              <path d="M4 4h16v16H4z" />
+              <path d="M4 6l8 7 8-7" />
+            </svg>
             <a href="mailto:{{ mosque_email }}">{{ mosque_email }}</a>
           </li>
         </ul>

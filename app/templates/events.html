@@ -488,7 +488,7 @@ False, "vol": False}) %}
 
 <div class="page">
 
-    {# ─── HERO (same nav as homepage) ─── #}
+    {# ─── HERO ─── #}
     <section class="hero ev-hero">
         <div class="ev-slides">
             {% if items %}
@@ -508,20 +508,7 @@ False, "vol": False}) %}
         <div class="hero-scrim"></div>
         <div class="hero-noise"></div>
 
-        <nav class="site-nav">
-            <div class="brand">
-                <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                    <path d="M20 6a12 12 0 1 0 0 20A10 10 0 1 1 20 6z" fill="#9a6e22" opacity="0.85" />
-                </svg>
-                <a href="/"><span class="brand-name">{{ mosque_name }}</span></a>
-            </div>
-            <div class="nav-links">
-                <a href="/#prayer-times">Prayer Times</a>
-                <a href="/#services">Services</a>
-                <a href="#contact">Contact</a>
-            </div>
-            <a href="#gallery" class="btn btn--gold nav-donate">Participate</a>
-        </nav>
+        {% include "partials/nav.html" %}
 
         <div class="hero-content">
             <p class="bismillah">فعاليات</p>
