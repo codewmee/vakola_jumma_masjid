@@ -3,30 +3,532 @@
 <head>
 <meta charset="UTF-8">
 <title>Nikah Nama — {{ data.sanad_no or '' }}</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@900&family=EB+Garamond:ital,wght@1,500&family=Noto+Nastaliq+Urdu:wght@400;500;600&family=Scheherazade+New:wght@500;600&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
-{% include "nikah/_paper_css.html" %}
 <style>
-  @page { size: A4; margin: 8mm; }
-  html, body { margin: 0; padding: 0; background: #fff; }
-  /* A4 minus 8mm margins = 194 x 281mm; 280.5 keeps it safely on one page */
-  .nk-paper { width: 194mm; height: 280.5mm; aspect-ratio: auto; box-shadow: none; }
+  @page {
+    size: A4 portrait;
+    margin: 8mm;
+  }
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  body {
+    font-family: 'Outfit', 'DejaVu Sans', sans-serif;
+    color: #241d0d;
+    background: #fff;
+  }
+  .ur {
+    font-family: 'Noto Nastaliq Urdu', 'Scheherazade New', 'Traditional Arabic', serif;
+    direction: rtl;
+  }
+
+  /* Paper container - exact printable area on A4 minus 8mm margins: 194mm x 281mm */
+  .nk-paper {
+    position: relative;
+    width: 194mm;
+    height: 280.5mm;
+    background: radial-gradient(circle at 50% 0%, #faf3dd, #efe0b8 130%);
+    overflow: hidden;
+  }
+
+  /* Decorative static background borders & corners */
+  .nk-static {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 0;
+    background-repeat: no-repeat;
+    background-image:
+      url("{{ url_for('static', filename='img/nikha/top_left.png') }}"),
+      url("{{ url_for('static', filename='img/nikha/top_right.png') }}"),
+      url("{{ url_for('static', filename='img/nikha/botom_left.png') }}"),
+      url("{{ url_for('static', filename='img/nikha/botom_right.png') }}"),
+      url("{{ url_for('static', filename='img/nikha/between_border.png') }}"),
+      url("{{ url_for('static', filename='img/nikha/full_border.png') }}");
+    background-position:
+      top left, top right,
+      bottom left, bottom right,
+      center,
+      center;
+    background-size:
+      15.2% auto, 15.2% auto,
+      15.2% auto, 15.2% auto,
+      calc(100% - 3.6%) calc(100% - 2.4%),
+      calc(100% - 1.6%) calc(100% - 1.1%);
+  }
+
+  .nk-body {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 1;
+  }
+
+  /* Header Arch */
+  .nk-arch {
+    position: absolute;
+    left: 2%;
+    top: 0.6%;
+    width: 96%;
+    height: 27%;
+    text-align: center;
+  }
+  .nk-arch .mosque {
+    position: absolute;
+    left: 37%;
+    top: 0;
+    width: 26%;
+    height: auto;
+    opacity: 0.94;
+  }
+  .nk-arch .bism {
+    position: absolute;
+    left: 0;
+    top: 22%;
+    width: 100%;
+    text-align: center;
+    font-size: 16pt;
+    font-weight: 600;
+    color: #7d5a1c;
+  }
+  .nk-arch .verse {
+    position: absolute;
+    top: 42%;
+    width: 27%;
+    font-size: 7pt;
+    color: #4a3d1c;
+    text-align: center;
+  }
+  .nk-arch .verse.l { left: 5%; }
+  .nk-arch .verse.r { right: 5%; }
+  .nk-arch .verse .ar {
+    font-size: 11pt;
+    color: #2c2410;
+    display: block;
+    margin-bottom: 2px;
+  }
+  .nk-arch .t-ur {
+    position: absolute;
+    left: 0;
+    top: 41%;
+    width: 100%;
+    font-size: 32pt;
+    font-weight: 600;
+    color: #1f6b35;
+  }
+  .nk-arch .t-en {
+    position: absolute;
+    left: 0;
+    top: 62%;
+    width: 100%;
+    font-size: 16pt;
+    font-weight: 900;
+    letter-spacing: 2px;
+    color: #1f6b35;
+  }
+  .nk-arch .divider {
+    position: absolute;
+    left: 0;
+    top: 71%;
+    width: 100%;
+    font-size: 8pt;
+    color: #b8862f;
+  }
+  .nk-arch .sub-ur {
+    position: absolute;
+    left: 0;
+    top: 75%;
+    width: 100%;
+    font-size: 12pt;
+    color: #2c2410;
+  }
+  .nk-arch .sub-en {
+    position: absolute;
+    left: 0;
+    top: 84%;
+    width: 100%;
+    font-size: 7.5pt;
+    letter-spacing: 1px;
+    color: #4a3d1c;
+    text-transform: uppercase;
+  }
+
+  /* Utility components */
+  .nk-lbl {
+    font-size: 7.5pt;
+    font-weight: 600;
+    color: #4a3d1c;
+    display: table;
+    width: 100%;
+    margin-bottom: 2px;
+  }
+  .nk-lbl .en-lbl { display: table-cell; text-align: left; }
+  .nk-lbl .ur-lbl { display: table-cell; text-align: right; color: #1f6b35; font-size: 9pt; }
+
+  .nk-vbox {
+    border: 1px solid #cdbb8e;
+    border-radius: 4px;
+    background: #fffdf5;
+    padding: 3px 6px;
+    font-size: 9pt;
+    height: 100%;
+    overflow: hidden;
+  }
+  .nk-vbox b { font-weight: 600; }
+  .nk-vbox .ur-sub { font-size: 8.5pt; color: #2c2410; }
+  .nk-vbox .sub { font-size: 7.5pt; color: #6a5a2e; }
+
+  .nk-medal {
+    border: 1.5px solid #b8862f;
+    background: #fffdf5;
+    border-radius: 8px;
+    text-align: center;
+    padding: 8px 4px;
+  }
+  .nk-medal .en {
+    font-weight: 700;
+    font-size: 11pt;
+    color: #7d5a1c;
+    display: block;
+  }
+  .nk-medal .ur {
+    font-size: 14pt;
+    color: #1f6b35;
+    display: block;
+  }
+
+  /* Table / Card layout sections */
+  .nk-field {
+    position: absolute;
+  }
+
+  /* Section top info (Date / Location / Serial) */
+  .f-top-date { left: 3.91%; top: 27.86%; width: 30.76%; }
+  .f-top-loc  { left: 37.60%; top: 27.86%; width: 32.23%; }
+  .f-top-ser  { left: 72.75%; top: 27.86%; width: 20.51%; }
+
+  /* Groom section (top: 33.5%) */
+  .f-groom-badge { left: 4.39%; top: 33.53%; width: 16%; height: 11%; }
+  .f-groom-name  { left: 22.46%; top: 33.53%; width: 70.80%; }
+  .f-groom-age   { left: 22.46%; top: 38.09%; width: 13.67%; }
+  .f-groom-addr  { left: 38.09%; top: 38.09%; width: 55.18%; }
+
+  /* Bride section (top: 47.8%) */
+  .f-bride-badge { left: 4.39%; top: 47.85%; width: 16%; height: 11%; }
+  .f-bride-name  { left: 22.46%; top: 47.85%; width: 70.80%; }
+  .f-bride-age   { left: 22.46%; top: 52.41%; width: 13.67%; }
+  .f-bride-addr  { left: 38.09%; top: 52.41%; width: 55.18%; }
+
+  /* Trio section (Vakil / Witness 1 / Witness 2) */
+  .f-trio-vakil { left: 3.91%; top: 62.5%; width: 29.79%; }
+  .f-trio-wit1  { left: 35.64%; top: 62.5%; width: 29.79%; }
+  .f-trio-wit2  { left: 67.38%; top: 62.5%; width: 28.81%; }
+
+  .nk-chead {
+    display: table;
+    width: 100%;
+    margin-bottom: 2px;
+    font-weight: 600;
+    font-size: 8.5pt;
+    color: #4a3d1c;
+  }
+  .nk-chead .en-title { display: table-cell; text-align: left; }
+  .nk-chead .ur-title { display: table-cell; text-align: right; color: #1f6b35; font-size: 10pt; }
+
+  /* Maher section */
+  .f-maher-amt  { left: 4.39%; top: 79.5%; width: 30.27%; }
+  .f-maher-opts { left: 37.11%; top: 79.8%; width: 58%; }
+
+  .nk-ckopt {
+    display: inline-block;
+    margin-right: 15px;
+    font-size: 8pt;
+    color: #4a3d1c;
+  }
+  .nk-ck {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border: 1px solid #7d5a1c;
+    border-radius: 2px;
+    background: #fffdf5;
+    vertical-align: middle;
+    margin-right: 3px;
+  }
+  .nk-ck.on {
+    background-color: #17722f;
+  }
+
+  /* Closing / Stamp / Signatures */
+  .f-stamp { left: 4.39%; top: 86.2%; width: 24.41%; }
+  .f-sigs  { left: 36.62%; top: 86.2%; width: 59.57%; }
+
+  .nk-stamp-box {
+    border: 1px dashed #b39a5c;
+    border-radius: 6px;
+    height: 55px;
+    text-align: center;
+    line-height: 55px;
+    font-size: 7.5pt;
+    color: #8a7844;
+  }
+
+  .nk-sig-row {
+    margin-bottom: 8px;
+    font-size: 8.5pt;
+    color: #4a3d1c;
+  }
+  .nk-sig-line {
+    border-bottom: 1px solid #8a7844;
+    display: inline-block;
+    width: 60%;
+    font-family: 'EB Garamond', 'Garamond', serif;
+    font-style: italic;
+    font-size: 10pt;
+    padding-left: 5px;
+  }
+
+  /* Footer Blessing */
+  .nk-blessing {
+    position: absolute;
+    left: 4%;
+    top: 96.2%;
+    width: 92%;
+    text-align: center;
+    font-size: 8.5pt;
+    color: #7d5a1c;
+    letter-spacing: 0.5px;
+  }
+  .nk-blessing .ur {
+    font-size: 11pt;
+    color: #1f6b35;
+    display: block;
+    margin-top: 1px;
+  }
 </style>
 </head>
 <body>
-<div id="cert-root"></div>
-<script id="cert-data" type="application/json">{{ data | tojson }}</script>
-{% include "nikah/_paper_js.html" %}
-<script>
-(function () {
-  var d = JSON.parse(document.getElementById('cert-data').textContent);
-  var root = document.getElementById('cert-root');
-  root.innerHTML = NikahPaper.render(d);
-  NikahPaper.fit(root);
-  var done = function () { NikahPaper.fit(root); document.body.setAttribute('data-ready', '1'); };
-  if (document.fonts && document.fonts.ready) { document.fonts.ready.then(done); } else { done(); }
-})();
-</script>
+
+<div class="nk-paper">
+  <div class="nk-static"></div>
+  <div class="nk-body">
+
+    <!-- Header Arch -->
+    <div class="nk-arch">
+      <img class="mosque" src="{{ url_for('static', filename='img/nikha/mosque_top.png') }}" alt="">
+      <div class="bism ur" lang="ur">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>
+      <div class="verse l">
+        <span class="ar" lang="ar">وَخَلَقْنَاكُمْ أَزْوَاجًا</span>
+        <span class="ref">(القرآن ٧٨:٨)</span>
+      </div>
+      <div class="verse r">
+        <span class="ar" lang="ar">لِّتَسْكُنُوٓا۟ إِلَيْهَا</span>
+        <span class="ref">(القرآن ٣٠:٢١)</span>
+      </div>
+      <div class="t-ur ur" lang="ur">نکاح نامہ</div>
+      <div class="t-en">NIKAH NAMA</div>
+      <div class="divider">❖ &nbsp; ❖ &nbsp; ❖</div>
+      <div class="sub-ur ur" lang="ur">عقد نکاح</div>
+      <div class="sub-en">Marriage Contract</div>
+    </div>
+
+    <!-- Top info: Date / Location / Serial -->
+    <div class="nk-field f-top-date">
+      <div class="nk-lbl">
+        <span class="en-lbl">Nikah Date</span>
+        <span class="ur-lbl ur" lang="ur">تاریخ نکاح</span>
+      </div>
+      <div class="nk-vbox">
+        <b>{{ data.date_formatted }}</b>
+        {% if data.date_sub %}<div class="sub">{{ data.date_sub }}</div>{% endif %}
+      </div>
+    </div>
+
+    <div class="nk-field f-top-loc">
+      <div class="nk-lbl">
+        <span class="en-lbl">Nikah Location</span>
+        <span class="ur-lbl ur" lang="ur">نکاح کی جگہ</span>
+      </div>
+      <div class="nk-vbox">
+        <b>{{ data.nikah_location }}</b>
+        {% if data.nikah_location_ur %}<div class="ur-sub ur" lang="ur">{{ data.nikah_location_ur }}</div>{% endif %}
+      </div>
+    </div>
+
+    <div class="nk-field f-top-ser">
+      <div class="nk-lbl">
+        <span class="en-lbl">Serial No.</span>
+        <span class="ur-lbl ur" lang="ur">سلسلہ نمبر</span>
+      </div>
+      <div class="nk-vbox">
+        <b>{{ data.serial_display or (data.sanad_no or '') }}</b>
+      </div>
+    </div>
+
+    <!-- Groom Party -->
+    <div class="nk-field f-groom-badge">
+      <div class="nk-medal">
+        <span class="en">Groom</span>
+        <span class="ur ur" lang="ur">دولہا</span>
+      </div>
+    </div>
+    <div class="nk-field f-groom-name">
+      <div class="nk-lbl">
+        <span class="en-lbl">Full Name of Groom</span>
+        <span class="ur-lbl ur" lang="ur">نام</span>
+      </div>
+      <div class="nk-vbox">
+        <b>{{ data.groom_name }}</b>
+        {% if data.groom_name_ur %}<span class="ur-sub ur" lang="ur">{{ data.groom_name_ur }}</span>{% endif %}
+      </div>
+    </div>
+    <div class="nk-field f-groom-age">
+      <div class="nk-lbl">
+        <span class="en-lbl">Age</span>
+        <span class="ur-lbl ur" lang="ur">عمر</span>
+      </div>
+      <div class="nk-vbox">
+        <b>{{ data.groom_age }}</b>
+      </div>
+    </div>
+    <div class="nk-field f-groom-addr">
+      <div class="nk-lbl">
+        <span class="en-lbl">Address</span>
+        <span class="ur-lbl ur" lang="ur">پتہ</span>
+      </div>
+      <div class="nk-vbox">
+        <b>{{ data.groom_address }}</b>
+        {% if data.groom_address_ur %}<span class="ur-sub ur" lang="ur">{{ data.groom_address_ur }}</span>{% endif %}
+      </div>
+    </div>
+
+    <!-- Bride Party -->
+    <div class="nk-field f-bride-badge">
+      <div class="nk-medal">
+        <span class="en">Bride</span>
+        <span class="ur ur" lang="ur">دلہن</span>
+      </div>
+    </div>
+    <div class="nk-field f-bride-name">
+      <div class="nk-lbl">
+        <span class="en-lbl">Full Name of Bride</span>
+        <span class="ur-lbl ur" lang="ur">نام</span>
+      </div>
+      <div class="nk-vbox">
+        <b>{{ data.bride_name }}</b>
+        {% if data.bride_name_ur %}<span class="ur-sub ur" lang="ur">{{ data.bride_name_ur }}</span>{% endif %}
+      </div>
+    </div>
+    <div class="nk-field f-bride-age">
+      <div class="nk-lbl">
+        <span class="en-lbl">Age</span>
+        <span class="ur-lbl ur" lang="ur">عمر</span>
+      </div>
+      <div class="nk-vbox">
+        <b>{{ data.bride_age }}</b>
+      </div>
+    </div>
+    <div class="nk-field f-bride-addr">
+      <div class="nk-lbl">
+        <span class="en-lbl">Address</span>
+        <span class="ur-lbl ur" lang="ur">پتہ</span>
+      </div>
+      <div class="nk-vbox">
+        <b>{{ data.bride_address }}</b>
+        {% if data.bride_address_ur %}<span class="ur-sub ur" lang="ur">{{ data.bride_address_ur }}</span>{% endif %}
+      </div>
+    </div>
+
+    <!-- Trio: Vakil & Witnesses -->
+    <div class="nk-field f-trio-vakil">
+      <div class="nk-chead">
+        <span class="en-title">Vakil</span>
+        <span class="ur-title ur" lang="ur">وکیل</span>
+      </div>
+      <div class="nk-vbox" style="margin-top:2px;">
+        <b>{{ data.vakil_name }}</b>
+        {% if data.vakil_name_ur %}<div class="ur-sub ur" lang="ur">{{ data.vakil_name_ur }}</div>{% endif %}
+        {% if data.vakil_address %}<div class="sub">{{ data.vakil_address }}</div>{% endif %}
+      </div>
+    </div>
+
+    <div class="nk-field f-trio-wit1">
+      <div class="nk-chead">
+        <span class="en-title">Witness 1</span>
+        <span class="ur-title ur" lang="ur">گواہ اول</span>
+      </div>
+      <div class="nk-vbox" style="margin-top:2px;">
+        <b>{{ data.witness1_name }}</b>
+        {% if data.witness1_name_ur %}<div class="ur-sub ur" lang="ur">{{ data.witness1_name_ur }}</div>{% endif %}
+        {% if data.witness1_address %}<div class="sub">{{ data.witness1_address }}</div>{% endif %}
+      </div>
+    </div>
+
+    <div class="nk-field f-trio-wit2">
+      <div class="nk-chead">
+        <span class="en-title">Witness 2</span>
+        <span class="ur-title ur" lang="ur">گواہ دوم</span>
+      </div>
+      <div class="nk-vbox" style="margin-top:2px;">
+        <b>{{ data.witness2_name }}</b>
+        {% if data.witness2_name_ur %}<div class="ur-sub ur" lang="ur">{{ data.witness2_name_ur }}</div>{% endif %}
+        {% if data.witness2_address %}<div class="sub">{{ data.witness2_address }}</div>{% endif %}
+      </div>
+    </div>
+
+    <!-- Maher Section -->
+    <div class="nk-field f-maher-amt">
+      <div class="nk-lbl">
+        <span class="en-lbl">Amount of Mahr</span>
+        <span class="ur-lbl ur" lang="ur">مہر کی رقم</span>
+      </div>
+      <div class="nk-vbox">
+        <b>{{ data.maher_formatted or (data.maher_amount or '') }}</b>
+      </div>
+    </div>
+
+    <div class="nk-field f-maher-opts">
+      <div class="nk-ckopt">
+        <span class="nk-ck {% if data.dower_type != 'deferred' %}on{% endif %}"></span>
+        Prompt Dower <span class="ur" lang="ur">فوری مہر</span>
+      </div>
+      <div class="nk-ckopt">
+        <span class="nk-ck {% if data.dower_type == 'deferred' %}on{% endif %}"></span>
+        Deferred Dower <span class="ur" lang="ur">مؤخر مہر</span>
+      </div>
+    </div>
+
+    <!-- Stamp & Signatures -->
+    <div class="nk-field f-stamp">
+      <div class="nk-lbl">
+        <span class="en-lbl">Stamp</span>
+        <span class="ur-lbl ur" lang="ur">مہر</span>
+      </div>
+      <div class="nk-stamp-box">Official Stamp / Seal</div>
+    </div>
+
+    <div class="nk-field f-sigs">
+      <div class="nk-sig-row">
+        <span>Qazi / Registrar <span class="ur" lang="ur">قاضی</span>:</span>
+        <span class="nk-sig-line">{{ data.qazi_display or data.qazi_name }}</span>
+      </div>
+      <div class="nk-sig-row">
+        <span>Groom's Signature <span class="ur" lang="ur">دستخط دولہا</span>:</span>
+        <span class="nk-sig-line"></span>
+      </div>
+      <div class="nk-sig-row">
+        <span>Bride's Signature <span class="ur" lang="ur">دستخط دلہن</span>:</span>
+        <span class="nk-sig-line"></span>
+      </div>
+    </div>
+
+    <!-- Footer Blessing -->
+    <div class="nk-blessing">
+      ❖ May Allah Bless This Union ❖
+      <span class="ur" lang="ur">اللہ اس رشتہ کو بابرکت بنائے</span>
+    </div>
+
+  </div>
+</div>
+
 </body>
 </html>
